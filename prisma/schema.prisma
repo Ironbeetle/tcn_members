@@ -1,0 +1,126 @@
+// Prisma schema for cPanel member activation backend
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["fnmemberlist", "tcnbulletin"]
+}
+
+enum ActivationStatus {
+  NONE
+  PENDING
+  ACTIVATED
+  
+  @@schema("fnmemberlist")
+}
+
+model fnmember {
+  id             String           @id @default(cuid())
+  created        DateTime         @default(now())
+  updated        DateTime         @default(now()) @updatedAt
+  birthdate      DateTime         @db.Date
+  first_name     String
+  last_name      String
+  t_number       String           @unique
+  activated      ActivationStatus @default(NONE)
+  deceased       String?
+  auth           fnauth? 
+  profile        Profile[]
+  barcode        Barcode[]
+  family         Family[]
+  
+  @@schema("fnmemberlist")
+}
+
+model Profile {
+  id           String    @id @default(cuid())
+  created      DateTime  @default(now())
+  updated      DateTime  @default(now()) @updatedAt
+  gender       String?
+  o_r_status   String
+  community    String
+  address      String
+  phone_number String
+  email        String
+  image_url    String?
+  fnmemberId   String?
+  fnmember     fnmember? @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
+  
+  @@schema("fnmemberlist")
+}
+
+model Barcode {
+  id         String    @id @default(cuid())
+  created    DateTime  @default(now())
+  updated    DateTime  @default(now()) @updatedAt
+  barcode    String
+  activated  Int       @default(1)  
+  fnmemberId String?
+  fnmember   fnmember? @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
+  
+  @@schema("fnmemberlist")
+}
+
+model Family {
+  id            String    @id @default(cuid())
+  created       DateTime  @default(now())
+  updated       DateTime  @default(now()) @updatedAt
+  spouse_fname  String?
+  spouse_lname  String?
+  dependents    Int       @default(0)
+  fnmemberId    String?
+  fnmember      fnmember? @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
+  
+  @@schema("fnmemberlist")
+}
+
+model fnauth {
+  id                String     @id @default(cuid())
+  created           DateTime   @default(now())
+  updated           DateTime   @default(now()) @updatedAt
+  username          String     @unique
+  email             String     @unique
+  password          String
+  verified          Boolean    @default(false)
+  
+  // Password reset fields
+  resetToken        String?    @unique
+  resetTokenExpiry  DateTime?
+  
+  // Security fields
+  lastLogin         DateTime?
+  loginAttempts     Int        @default(0)
+  lockedUntil       DateTime?
+  
+  // Relations
+  fnmemberId        String     @unique
+  fnmember          fnmember   @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
+  
+  @@schema("fnmemberlist")
+}
+
+model bulletin {
+  id            String     @id @default(cuid())
+  created       DateTime   @default(now())
+  updated       DateTime   @default(now()) @updatedAt
+  title         String
+  subject       String
+  poster_url    String
+  category      Categories @default(CHIEFNCOUNCIL)
+  @@schema("tcnbulletin")
+}
+
+enum Categories{
+  CHIEFNCOUNCIL
+  HEALTH
+  EDUCATION
+  RECREATION
+  EMPLOYMENT
+  PROGRAM_EVENTS
+  ANNOUNCEMENTS
+  @@schema("tcnbulletin")
+}

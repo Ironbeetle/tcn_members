@@ -1,0 +1,678 @@
+.element::-webkit-scrollbar {
+  display: none;
+}
+
+.element {
+  display: none;
+}
+
+.topnavbar{
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4rem;
+  z-index: 100;
+  position: fixed;
+  background-color:#000000;
+  border-bottom-style: solid;
+  border-bottom-color: rgba(250,250,250, 0.6);
+  border-bottom-width: 2px;
+}
+.navlink{
+  background-color: rgba(25,25,25, 0);
+  height: 100%;
+  margin: 0;
+  color: #fff;
+  -webkit-transition: all ease 0.9s;
+  -moz-transition: all ease 0.9s;
+  -o-transition: all ease 0.9s;
+  -ms-transition: all ease 0.9s;
+  transition: all ease 0.9s;
+}
+
+@keyframes bkg_fader{
+  from {opacity: 0;
+        filter: blur(0px);
+      }
+  to { opacity: 100;
+        filter: blur(10px);
+    }
+
+}
+
+.screenblur{
+  background-color: rgba(27, 27, 27, 0.4);
+  animation-name: bkg_fader;
+  animation-duration: 2s;
+  animation-fill-mode: forwards;
+  
+}
+
+.navlink:hover{
+  background-color: rgba(250,250,250, 0.6);
+  color: rgba(25,25,25,0.5); 
+  cursor: pointer;
+}
+
+.smooth-scroll {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  -webkit-perspective: 1000;
+  -webkit-backface-visibility: hidden;
+  perspective: 1000;
+  backface-visibility: hidden;
+}
+
+.scale-image
+{
+  display: block;
+  width: auto;
+  max-width: 100%;
+}
+
+/* Ensure the menu doesn't affect scroll content */
+.menuToggle {
+  position: relative;
+  z-index: 50;
+}
+
+/* Add some spacing for the carousel navigation */
+.carousel-prev,
+.carousel-next {
+  margin: 0 1rem;
+}
+
+.techbkg{
+  top:0;
+  left:0;
+  background-image: linear-gradient(to bottom right, rgb(4, 0, 113), rgb(47, 134, 255));
+  height:100vh;
+}
+
+/* Interactive elements styling */
+.panel{
+  background-size: cover;
+  background-image: url("/tcnaboutbkg.jpg");
+  background-position: center;
+  background-repeat: no-repeat;
+} 
+
+.about_tile{
+  background-image: url("/Whoweare.jpg");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+} 
+
+.territorybkg{
+  background-image: url("/ourhomebkg.jpg");
+  background-position: top;
+  background-repeat: no-repeat;
+  background-size: cover;
+} 
+
+.bhallbkg{
+  background-image: url("/tcnarialview2.jpg");
+  background-position: top;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.ecdevbkg{
+ background-image: url("/ecdevherobkg.jpg");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.photobkg{
+ background-image: url("/photogallerybkg.jpg");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.paneshad{
+  box-shadow: 3px 10px 8px rgba(0, 0, 0, 0.3);
+}
+
+.panelalt{
+  position: relative;
+  overflow: hidden;
+  background-color:rgba(197, 192, 192, 0.5);
+  border-radius: 1rem;
+  border-width: 0.25rem;
+  border-style: solid;
+  border-color:#704F4F;
+  box-shadow: 3px 10px 8px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+  transition: all 0.3s ease;
+} 
+
+.paneltall{
+  position: relative;
+  overflow: hidden;
+  background-color:#539B67;
+  border-radius: 1rem;
+  border-width: 0.25rem;
+  border-style: solid;
+  border-color:#704F4F;
+  box-shadow: 3px 10px 8px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+  transition: all 0.3s ease;
+} 
+
+.panelalt:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.borderbot{
+  border-bottom-style: solid;
+  border-bottom-width: 0.25rem;
+  border-bottom-color:#704F4F;
+}
+
+.bordertop{
+  border-top-style: solid;
+  border-top-width: 0.25rem;
+  border-top-color:#704F4F;
+}
+
+.borderright{
+  border-right-style: solid;
+  border-right-width: 0.25rem;
+  border-right-color:#704F4F;
+}
+/* Link styling */
+.btnlayer {
+  position: relative;
+  z-index: 20;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: rgba(250, 250, 250, 0.5);
+  border-radius: 1rem;
+  padding: 0;
+  margin: 0;
+}
+
+.btnlayer:hover {
+  background-color: rgba(250, 250, 250, 0.7);
+  transform: translateY(-4px);
+}
+
+.btnlayerlg {
+  position: relative;
+  z-index: 20;
+  cursor: pointer;
+  background-color: rgba(250, 250, 250, 0.4);
+  padding: 0;
+  transition: all 0.3s ease;
+}
+
+.btnlayerlg:hover {
+  background-color: rgba(250, 250, 250, 0.7);
+}
+
+/* Content sections */
+.content-section {
+  position: relative;
+  max-height: 90dvh;
+  padding: 0;
+  margin: 0;  
+}
+
+.content-sectionmd {
+  position: relative;
+  max-height: 75dvh;
+  padding: 0;
+}
+
+.content-sectionsm {
+  position: relative;
+  max-height: 15dvh;
+  padding: 0;
+  margin: 0;
+}
+/* END */
+.navbtn{
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 100;
+}
+
+.pagelabel{
+  position: absolute;
+  bottom: 20%;
+  left: 50%;
+  transform: translate( -50%);
+  width: max-content;
+  height: max-content;
+  z-index: 100;
+}
+
+.pagebtn{
+  position: absolute;
+  bottom: 20%;
+  left: 50%;
+  transform: translate( -50%);
+  width: max-content;
+  height: max-content;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  background-color: #529C67;
+  border-radius: 1rem;
+  border-color:#704F4F;
+  border-width: 0.15rem;
+  z-index: 100;
+  transition: all 0.3s ease;
+}
+
+.pagebtn:hover{
+  background-color: rgba(25, 25, 25, 0.7);
+}
+
+.scale-imagemax{
+  display: block;
+  width: auto;
+  max-width: 100%;
+}
+
+.scale-imagemin{
+  display: block;
+  width: auto;
+  max-width: 15%;
+}
+
+a {
+  position: relative;
+  z-index: 50; 
+  display: block;
+  height: 100%;
+  width: 100%;
+  cursor: pointer;
+}
+.tcnaboutbkg{
+  background-image:
+  url("/tcnaboutbkg.jpg");
+  background-size: cover;
+  background-position: center;
+  background-attachment:scroll;
+  overflow: hidden;
+}
+.genbkg{
+  background-image:
+  url("/regbkg.jpg");
+  background-size: cover;
+  background-position: center;
+  background-attachment:fixed;
+}
+/* text start */
+.apptext  {
+  font-size: clamp(1.5rem, 0.964rem + 1.429vw, 2.25rem);
+  font-weight: 500;
+  color: rgba(25, 25, 25, 0.7);
+  padding: 0;
+  text-align: center;
+}
+
+.apptextw  {
+  font-size: clamp(1.5rem, 1.5vw + 1.2rem, 3rem);
+  font-weight: 500;
+  color: rgba(250, 250, 250, 0.7);
+  padding: 0;
+  text-align: center;
+}
+
+.apptextmini  {
+  font-size: clamp(0.5rem, 0rem + 1.333vw, 1.2rem);
+  font-weight: 400;
+  color: rgba(250, 250, 250, 0.7);
+  padding: 0;
+  text-align: center;
+}
+
+.apptextminib  {
+  font-size: clamp(0.5rem, 0.143rem + 0.952vw, 1.2rem);
+  font-weight: 600;
+  color: rgba(25, 25, 25, 0.7);
+  padding: 0;
+  text-align: center;
+  border-radius: 1rem;
+  border-width: 2px;
+  border-style: solid;
+  border-color: rgba(27, 27, 27, 0.5);
+  background-color: rgba(250, 250, 250, 0.8);
+}
+
+.apptextBold  {
+  font-size: clamp(1.5rem, 0.429rem + 2.857vw, 3rem);
+  font-weight: bold;
+  color: rgba(25, 25, 25, 0.7);
+  padding: 0;
+  text-align: center;
+}
+
+.apptextBoldw  {
+  font-size: clamp(1rem, 3vw + 0.4rem, 4rem);
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 0;
+  text-align: center;
+}
+
+.apptextlg  {
+  font-size: clamp(2.5rem, 1.5vw + 2.2rem, 4rem);
+  font-weight: 500;
+  padding: 0;
+  text-align: center;
+}
+
+.apptextlgB  {
+  font-size: clamp(1.5rem, 0.071rem + 3.81vw, 3.5rem);
+  font-weight: 500;
+  padding: 0;
+  color: rgba(26, 26, 26, 0.5);
+  text-align: center;
+}
+
+.apptextlgBold  {
+  font-size: clamp(2.5rem, 1.5vw + 2.2rem, 4rem);
+  font-weight: 700;
+  padding: 0;
+  text-align: center;
+  color: rgba(25, 25, 25, 0.7);
+
+}
+
+.apptextTitle  {
+  font-size: clamp(2.5rem, 2.5vw + 2rem, 5rem);
+  font-weight: 600;
+  padding: 0;
+  text-align: center;
+  color: rgba(25, 25, 25, 0.7);
+}
+
+.techtxttitle{
+  font-size: clamp(2rem, 0.929rem + 2.857vw, 3.5rem);
+  font-weight: 500;
+  padding: 0;
+  text-align: center;
+  color: rgba(25, 25, 25, 0.7);
+}
+
+.techtxttitley{
+  font-size: clamp(2rem, 0.929rem + 2.857vw, 3.5rem);
+  font-weight: 500;
+  padding: 0;
+  text-align: center;
+  color: rgba(245, 235, 157, 0.8);
+}
+
+
+.techtxtbbb{
+  font-size: clamp(1.5rem, 0.607rem + 2.381vw, 2.75rem);
+  font-weight: 600;
+  padding: 1rem;
+  background-color: #7b3306;
+  color: rgba(250, 250, 250, 0.6);
+}
+
+.techtxtbb{
+  font-size: clamp(1.4rem, 0.436rem + 2.571vw, 2.75rem);
+  font-weight: 550;
+  padding: 0;
+  color: rgba(25, 25, 25, 0.7);
+}
+
+.techtxtmb{
+  font-size: clamp(1.5rem, 0.964rem + 1.429vw, 2.25rem);
+  font-weight: 500;
+  padding: 0;
+  color: rgba(25, 25, 25, 0.7);
+}
+
+.techtxtmbb{
+  font-size: clamp(1.5rem, 0.964rem + 1.429vw, 2.25rem);  
+  font-weight: 600;
+  padding: 0;
+  color: rgba(25, 25, 25, 0.8);
+}
+.techtxtmby{
+  font-size: clamp(1.25rem, 0.714rem + 1.429vw, 2rem);
+  font-weight: 700;
+  padding: 0;
+  color: rgba(245, 235, 157, 0.8);
+}
+.techtxtsb{
+  font-size: clamp(1rem, 0.643rem + 0.952vw, 1.5rem);
+  font-weight: 500;
+  color: rgba(25, 25, 25, 0.7);
+  padding: 0;
+}
+.techtxtsbb{
+  font-size: clamp(1rem, 0.643rem + 0.952vw, 1.5rem);
+  font-weight: 700;
+  color: rgba(25, 25, 25, 0.7);
+  padding: 0;
+}
+/* text end */
+
+.topbkg{
+  background-image:
+  url("/Eaglerapids2020.jpg");
+  background-size: cover;
+  background-position: top;
+  background-attachment: fixed;
+  border-bottom-style: solid;
+  border-bottom-color: rgba(250,250,250, 0.6);
+  border-bottom-width: 2px;
+  height: 92vh;
+}
+
+/* hamburger menu */
+.hamlink{
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 150;
+  width: fit-content;
+  height: fit-content;
+}
+
+.menuToggle
+{
+  display: block;
+  position: relative;
+  top: 24px;
+  left: 21px;
+  width: fit-content;
+  z-index: 1;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@media only screen and (max-width: 595px) {
+  .menuToggle{
+      top: 20px;
+      left: 21px;
+  }
+}
+.menuToggle a
+{
+  text-decoration: none;
+  color: #232323;
+  transition: color 0.3s ease;
+}
+
+.menuToggle a:hover
+{
+  color: rgb(249, 245, 192);
+}
+
+.menuToggle input
+{
+  display: block;
+  width: 80px;
+  height: 64px;
+  position: absolute;
+  top: -10px;
+  left: -5px;
+  cursor: pointer;
+  opacity: 0; /* hide this */
+  z-index: 2; /* and place it over the hamburger */
+  -webkit-touch-callout: none;
+}
+
+.menuToggle span
+{
+  display: block;
+  width: 50px;
+  height: 6px;
+  margin-bottom: 7px;
+  position: relative;
+  background: #615200;
+  border-radius: 3px;
+  z-index: 1;
+  transform-origin: 4px 0px;
+  transition: transform 0.5s cubic-bezier(0.77,0.2,0.05,1.0),
+              background 0.5s cubic-bezier(0.77,0.2,0.05,1.0),
+              opacity 0.55s ease;
+}
+
+@media screen and (max-width: 595px) {
+  .menuToggle span{
+      width: 40px;
+      height: 4px;
+      margin-bottom: 7px;
+  }
+}
+
+.menuToggle span:first-child
+{
+  transform-origin: 0% 0%;
+}
+
+.menuToggle span:nth-last-child(2)
+{
+  transform-origin: 0% 100%;
+}
+
+.menuToggle input:checked ~ span
+{
+  opacity: 1;
+  transform: rotate(45deg) translate(-2px, -1px);
+  background: #232323;
+}
+
+.menuToggle input:checked ~ span:nth-last-child(3)
+{
+  opacity: 0;
+  transform: rotate(0deg) scale(0.2, 0.2);
+}
+
+.menuToggle input:checked ~ span:nth-last-child(2)
+{
+  transform: rotate(-45deg) translate(0, -1px);
+}
+
+.menu
+{
+  position: absolute;
+  width: 400px;
+  height: 100vh;
+  height: 100dvh;
+  margin: -100px 0 0 -50px;
+  padding: 20px;
+  padding-top: 125px;
+  border-right: 5px solid rgba(26,26,26,0.5);
+  background: linear-gradient(to bottom, #ffcb21, #2f2607) ;
+  list-style-type: none;
+  -webkit-font-smoothing: antialiased;
+  /* to stop flickering of text in safari */
+  transform-origin: 0% 0%;
+  transform: translate(-100%, 0);
+  transition: transform 0.5s cubic-bezier(0.77,0.2,0.05,1.0);
+}
+
+.menu li
+{
+  padding: 10px 0;
+  font-size: 32px;
+  text-align: center;
+}
+/*And let's slide it in from the left*/
+.menuToggle input:checked ~ ul
+{
+  transform: none;
+}
+/* end hamburger */
+#tcnbkgimg {
+  width: 100%;
+  height: 100vh;
+  object-fit: cover;
+  object-position: center;
+}
+
+@media only screen and (max-width: 595px) {
+  #tcnbkgimg {
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    object-position: center;
+  }
+
+} 
+
+/* Add responsive adjustments for mobile */
+@media only screen and (max-width: 480px) {
+    /* .genbkg {
+        height: auto;
+        min-height: 100vh;
+    } */
+
+    /* Ensure proper spacing between sections */
+    .bordertop {
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    /* Adjust button spacing */
+    .appbtn {
+        margin: 0.5rem 0;
+        padding: 1rem;
+    }
+}
+
+
+.ATKbkg{
+  background-image:
+  url("/ATKopenImage.jpg");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+.ancientbkg{
+  background-image:
+  url("/AncesterCamp.jpg");
+  background-size: cover;
+  background-position:center;
+  background-attachment: fixed;
+  height: 80vh;
+  height: 80dvh;
+}
+
+.tcnvision{
+  background-image:
+  url("/TCNairnsky.jpg");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  height: 100vh;
+}
