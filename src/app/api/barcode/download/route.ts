@@ -43,7 +43,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Read the PDF file from barcodes directory (not in public folder)
-    // Assuming barcodes are stored in /barcodes folder at root level
     const barcodePath = join(process.cwd(), 'barcodes', `${barcodeNumber}.pdf`);
     
     try {

@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Tataskweyak Cree Nation",
+  title: "TCN_Members",
   description: "Tataskweyak Cree Nation Member Portal",
   icons: {
     icon: "/favicon-32x32.png",

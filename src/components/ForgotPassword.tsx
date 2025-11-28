@@ -39,9 +39,14 @@ export default function ForgotPassword() {
             <div className="space-y-4">
               <div className="p-4 bg-green-50 border border-green-200 rounded-md">
                 <p className="text-sm text-green-600">
-                  If an account exists with that email, you will receive a password reset link shortly.
+                  If an account exists with that email, you will receive a PIN shortly. Check your email and use the button below to enter it.
                 </p>
               </div>
+              <Link href="/reset-password">
+                <Button className="w-full bg-amber-700 hover:bg-amber-800">
+                  Enter PIN & Reset Password
+                </Button>
+              </Link>
               <Link href="/TCN_Enter">
                 <Button variant="outline" className="w-full">
                   Back to Login
@@ -63,7 +68,7 @@ export default function ForgotPassword() {
                       message: "Invalid email address"
                     }
                   })}
-                  disabled={isLoading}
+                  disabled={isPending}
                   placeholder="your.email@example.com"
                 />
                 {errors.email && (

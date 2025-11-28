@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Hamburger } from '@/components/Hamburger';
@@ -15,12 +15,19 @@ import {
   Phone, 
   MapPin,
   CreditCard,
-  Download,
   Edit,
   Save,
-  X
+  X,
+  ArrowLeft
 } from 'lucide-react';
-import { prisma } from '@/lib/prisma';
+import Image from 'next/image';
+
+const menuItems = [
+  { label: "About Tataskweyak", to: "/pages/AboutTCN", color: "stone" as const },
+  { label: "About Who We Are", to: "/pages/WorldViewHome", color: "stone" as const },
+  { label: "Photo Gallery", to: "/pages/PhotoGallery", color: "stone" as const },
+  { label: "Home", to: "/", color: "stone" as const },
+];
 
 const contactUpdateSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -54,7 +61,6 @@ export default function MemberAccount() {
   const [memberData, setMemberData] = useState<MemberData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [downloadingBarcode, setDownloadingBarcode] = useState(false);
 
   const {
     register,
@@ -65,23 +71,23 @@ export default function MemberAccount() {
     resolver: zodResolver(contactUpdateSchema)
   });
 
-  const menuItems = [
-    { label: "About Tataskweyak", to: "/pages/AboutTCN", color: "stone" as const },
-    { label: "About Who We Are", to: "/pages/WorldViewHome", color: "stone" as const },
-    { label: "Photo Gallery", to: "/pages/PhotoGallery", color: "stone" as const },
-    { label: "Home", to: "/", color: "stone" as const },
-  ];
-
   useEffect(() => {
+    const abortController = new AbortController();
+
     async function fetchMemberData() {
       if (!session?.user?.id) return;
 
       try {
         setLoading(true);
-        const response = await fetch(`/api/member/${session.user.id}`);
+        const response = await fetch(`/api/member/${session.user.id}`, {
+          signal: abortController.signal
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch');
+        
         const result = await response.json();
 
-        if (result.success) {
+        if (result.success && !abortController.signal.aborted) {
           setMemberData(result.data);
           if (result.data.profile) {
             reset({
@@ -90,23 +96,31 @@ export default function MemberAccount() {
               address: result.data.profile.address,
             });
           }
-        } else {
+        } else if (!abortController.signal.aborted) {
           toast.error('Failed to load account data');
         }
-      } catch (error) {
-        console.error('Error fetching member data:', error);
-        toast.error('An error occurred while loading your account');
+      } catch (error: any) {
+        if (error.name !== 'AbortError' && !abortController.signal.aborted) {
+          console.error('Error fetching member data:', error);
+          toast.error('An error occurred while loading your account');
+        }
       } finally {
-        setLoading(false);
+        if (!abortController.signal.aborted) {
+          setLoading(false);
+        }
       }
     }
 
     if (status === 'authenticated') {
       fetchMemberData();
     }
-  }, [session, status, reset]);
 
-  const onSubmit = async (data: ContactUpdateData) => {
+    return () => {
+      abortController.abort();
+    };
+  }, [session?.user?.id, status, reset]);
+
+  const onSubmit = useCallback(async (data: ContactUpdateData) => {
     try {
       const response = await fetch('/api/member/update-contact', {
         method: 'POST',
@@ -139,40 +153,9 @@ export default function MemberAccount() {
       console.error('Error updating contact info:', error);
       toast.error('An error occurred while updating');
     }
-  };
+  }, [session?.user?.id, memberData]);
 
-  const handleDownloadBarcode = async () => {
-    if (!memberData?.barcode?.barcode) {
-      toast.error('No barcode assigned to your account');
-      return;
-    }
 
-    try {
-      setDownloadingBarcode(true);
-      const response = await fetch(`/api/barcode/download?barcode=${memberData.barcode.barcode}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to download barcode');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `TCN-Barcode-${memberData.barcode.barcode}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      toast.success('Barcode downloaded successfully');
-    } catch (error) {
-      console.error('Error downloading barcode:', error);
-      toast.error('Failed to download barcode');
-    } finally {
-      setDownloadingBarcode(false);
-    }
-  };
 
   if (status === "loading" || loading) {
     return (
@@ -207,6 +190,22 @@ export default function MemberAccount() {
       
       <div className="pt-16 lg:pt-16">
         <div className="max-w-5xl mx-auto px-4 py-6">
+          {/* Back Button */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mb-4"
+          >
+            <button
+              onClick={() => router.back()}
+              className="flex items-center gap-2 px-4 py-2 text-stone-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-sm font-medium">Back</span>
+            </button>
+          </motion.div>
+
           {/* Page Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -221,9 +220,9 @@ export default function MemberAccount() {
             <p className="text-amber-50 mt-2">View and manage your account information</p>
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             {/* Left Column - Account Info */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-3 space-y-6">
               {/* Personal Information Card */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -411,7 +410,7 @@ export default function MemberAccount() {
             </div>
 
             {/* Right Column - Barcode */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-2">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -422,32 +421,25 @@ export default function MemberAccount() {
                 
                 {memberData.barcode ? (
                   <div className="space-y-4">
-                    <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-6 text-center">
-                      <CreditCard className="w-16 h-16 text-amber-700 mx-auto mb-3" />
-                      <p className="text-sm text-amber-800 mb-2">Barcode Number</p>
-                      <p className="text-2xl font-bold text-amber-900 tracking-wider">{memberData.barcode.barcode}</p>
+                    <div className="bg-white rounded-xl border-2 border-amber-200 p-1">
+                      <div className="relative w-full aspect-[4/3] bg-white rounded-lg overflow-hidden">
+                        <Image
+                          src={`/api/barcode/image?barcode=${memberData.barcode.barcode}`}
+                          alt={`Barcode ${memberData.barcode.barcode}`}
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </div>
                     </div>
 
-                    <button
-                      onClick={handleDownloadBarcode}
-                      disabled={downloadingBarcode}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-700 text-white rounded-lg hover:bg-amber-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {downloadingBarcode ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          <span>Downloading...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Download className="w-4 h-4" />
-                          <span>Download Barcode PDF</span>
-                        </>
-                      )}
-                    </button>
+                    <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-4 text-center">
+                      <p className="text-xs text-amber-800 mb-1">Barcode Number</p>
+                      <p className="text-lg font-bold text-amber-900 tracking-wider">{memberData.barcode.barcode}</p>
+                    </div>
 
                     <p className="text-xs text-stone-500 text-center">
-                      Download your barcode to present at community events and services
+                      Show this barcode at community events and services
                     </p>
                   </div>
                 ) : (

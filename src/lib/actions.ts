@@ -4,6 +4,7 @@ import { PrismaClient } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
+import { sendPasswordResetEmail } from "./email";
 import {
   fnmemberCreateSchema,
   fnmemberUpdateSchema,
@@ -756,8 +757,16 @@ export async function requestPasswordReset(data: PasswordResetRequest): Promise<
       },
     });
 
-    // TODO: Send PIN via email or SMS
-    console.log(`Password reset PIN for ${user.email}: ${pin}`);
+    // Send PIN via email
+    console.log('[Password Reset] Sending PIN to user:', user.email);
+    const emailResult = await sendPasswordResetEmail(user.email, pin);
+    
+    if (!emailResult.success) {
+      console.error('[Password Reset] Failed to send password reset email:', emailResult.error);
+      // Still return success to not reveal if user exists, but log the error
+    } else {
+      console.log('[Password Reset] PIN email sent successfully to:', user.email);
+    }
 
     return { success: true };
   } catch (error: any) {

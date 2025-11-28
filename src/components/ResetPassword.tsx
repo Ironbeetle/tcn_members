@@ -1,19 +1,22 @@
+'use client'
+
 import { useState } from "react"
 import { useForm } from "react-hook-form"
-import { Link, useNavigate, useSearchParams } from "react-router-dom"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Button } from "./ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Label } from "./ui/label"
 
 type ResetPasswordFormData = {
+  email: string
+  pin: string
   password: string
   confirmPassword: string
 }
 
 export default function ResetPassword() {
-  const [searchParams] = useSearchParams()
-  const token = searchParams.get('token')
-  const navigate = useNavigate()
+  const router = useRouter()
   
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>("")
@@ -24,23 +27,19 @@ export default function ResetPassword() {
   const password = watch("password")
 
   const onSubmit = async (data: ResetPasswordFormData) => {
-    if (!token) {
-      setError("Invalid or missing reset token")
-      return
-    }
-
     setIsLoading(true)
     setError("")
     setSuccess(false)
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/reset-password`, {
+      const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          token,
+          email: data.email,
+          pin: data.pin,
           newPassword: data.password 
         }),
       })
@@ -48,14 +47,14 @@ export default function ResetPassword() {
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.message || 'Failed to reset password')
+        throw new Error(result.error || 'Failed to reset password')
       }
 
       setSuccess(true)
       
       // Redirect to login after 2 seconds
       setTimeout(() => {
-        navigate('/TCN_Members/TCN_Enter')
+        router.push('/TCN_Enter')
       }, 2000)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to reset password")
@@ -64,35 +63,13 @@ export default function ResetPassword() {
     }
   }
 
-  if (!token) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-white to-amber-50 px-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Invalid Reset Link</CardTitle>
-            <CardDescription>
-              This password reset link is invalid or has expired
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link to="/forgot-password">
-              <Button className="w-full bg-amber-700 hover:bg-amber-800">
-                Request New Reset Link
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-white to-amber-50 px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Reset Your Password</CardTitle>
           <CardDescription>
-            Enter your new password below
+            Enter the PIN from your email and create a new password
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -106,6 +83,49 @@ export default function ResetPassword() {
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <input
+                  id="email"
+                  type="email"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  {...register("email", { 
+                    required: "Email is required",
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: "Invalid email address"
+                    }
+                  })}
+                  disabled={isLoading}
+                  placeholder="your.email@example.com"
+                />
+                {errors.email && (
+                  <p className="text-sm text-red-600">{errors.email.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="pin">4-Digit PIN</Label>
+                <input
+                  id="pin"
+                  type="text"
+                  maxLength={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 text-center text-2xl tracking-widest"
+                  {...register("pin", { 
+                    required: "PIN is required",
+                    pattern: {
+                      value: /^\d{4}$/,
+                      message: "PIN must be 4 digits"
+                    }
+                  })}
+                  disabled={isLoading}
+                  placeholder="0000"
+                />
+                {errors.pin && (
+                  <p className="text-sm text-red-600">{errors.pin.message}</p>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="password">New Password</Label>
                 <input
@@ -157,7 +177,7 @@ export default function ResetPassword() {
                 {isLoading ? "Resetting Password..." : "Reset Password"}
               </Button>
 
-              <Link to="/TCN_Members/TCN_Enter">
+              <Link href="/TCN_Enter">
                 <Button variant="outline" className="w-full">
                   Back to Login
                 </Button>

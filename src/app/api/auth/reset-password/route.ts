@@ -4,8 +4,9 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
 const resetPasswordSchema = z.object({
-  token: z.string().min(1, "Reset token is required"),
-  password: z.string()
+  email: z.string().email("Invalid email format"),
+  pin: z.string().regex(/^\d{4}$/, "PIN must be 4 digits"),
+  newPassword: z.string()
     .min(8, "Password must be at least 8 characters")
     .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
@@ -17,40 +18,50 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = resetPasswordSchema.parse(body);
 
-    // Find user by reset token
+    // Find user by email
     const authRecord = await prisma.fnauth.findUnique({
-      where: { resetToken: validatedData.token },
+      where: { email: validatedData.email },
     });
 
-    if (!authRecord) {
+    if (!authRecord || !authRecord.pin || !authRecord.pinExpiresAt) {
       return NextResponse.json(
-        { error: "Invalid or expired reset token" },
+        { error: "Invalid reset request" },
         { status: 400 }
       );
     }
 
-    // Check if token is expired
-    if (!authRecord.resetTokenExpiry || authRecord.resetTokenExpiry < new Date()) {
+    // Check if PIN has expired
+    if (authRecord.pinExpiresAt < new Date()) {
       return NextResponse.json(
-        { error: "Reset token has expired. Please request a new one." },
+        { error: "PIN has expired. Please request a new password reset." },
+        { status: 400 }
+      );
+    }
+
+    // Verify PIN
+    if (authRecord.pin !== validatedData.pin) {
+      return NextResponse.json(
+        { error: "Invalid PIN" },
         { status: 400 }
       );
     }
 
     // Hash new password
-    const hashedPassword = await bcrypt.hash(validatedData.password, 12);
+    const hashedPassword = await bcrypt.hash(validatedData.newPassword, 12);
 
-    // Update password and clear reset token
+    // Update password and clear PIN
     await prisma.fnauth.update({
       where: { id: authRecord.id },
       data: {
         password: hashedPassword,
-        resetToken: null,
-        resetTokenExpiry: null,
+        pin: null,
+        pinExpiresAt: null,
         loginAttempts: 0,
         lockedUntil: null,
       },
     });
+
+    console.log('[Password Reset API] Password successfully reset for:', validatedData.email);
 
     return NextResponse.json(
       { 

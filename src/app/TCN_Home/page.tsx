@@ -13,7 +13,8 @@ import {
   Heart, 
   GraduationCap, 
   Wrench, 
-  TrendingUp 
+  TrendingUp,
+  ArrowLeft
 } from 'lucide-react';
 
 const departments = [
@@ -21,56 +22,56 @@ const departments = [
     title: 'Town Hall',
     description: 'Community meetings, events, and important announcements',
     icon: Building2,
-    link: '/TCN_Members/TownHall',
+    link: '/TCN_TownHall',
   },
   {
     title: 'Band Office',
     description: 'Administrative services and member support',
     icon: Briefcase,
-    link: '/TCN_Members/BandOffice',
+    link: '/TCN_BandOffice',
   },
   {
-    title: 'Chief & Council',
+    title: 'Local Governance',
     description: 'Leadership updates and governance information',
     icon: Users,
-    link: '/TCN_Members/ChiefCouncil',
+    link: '/TCN_LocalGovernance',
   },
-  {
-    title: 'Community Health',
-    description: 'Health services, wellness programs, and resources',
-    icon: Heart,
-    link: '/TCN_Members/CommunityHealth',
-  },
-  {
-    title: 'Jobs & Training',
-    description: 'Employment opportunities and skills development',
-    icon: Wrench,
-    link: '/TCN_Members/JobsTraining',
-  },
-  {
-    title: 'Education',
-    description: 'Learning programs, scholarships, and student support',
-    icon: GraduationCap,
-    link: '/TCN_Members/Education',
-  },
-  {
-    title: 'Business Development',
-    description: 'Economic initiatives and entrepreneurship support',
-    icon: TrendingUp,
-    link: '/TCN_Members/BusinessDevelopment',
-  }
+  // {
+  //   title: 'Community Health',
+  //   description: 'Health services, wellness programs, and resources',
+  //   icon: Heart,
+  //   link: '/TCN_Members/CommunityHealth',
+  // },
+  // {
+  //   title: 'Jobs & Training',
+  //   description: 'Employment opportunities and skills development',
+  //   icon: Wrench,
+  //   link: '/TCN_Members/JobsTraining',
+  // },
+  // {
+  //   title: 'Education',
+  //   description: 'Learning programs, scholarships, and student support',
+  //   icon: GraduationCap,
+  //   link: '/TCN_Members/Education',
+  // },
+  // {
+  //   title: 'Business Development',
+  //   description: 'Economic initiatives and entrepreneurship support',
+  //   icon: TrendingUp,
+  //   link: '/TCN_Members/BusinessDevelopment',
+  // }
+];
+
+const menuItems = [
+  { label: "About Tataskweyak", to: "/pages/AboutTCN", color: "stone" as const },
+  { label: "About Who We Are", to: "/pages/WorldViewHome", color: "stone" as const },
+  { label: "Photo Gallery", to: "/pages/PhotoGallery", color: "stone" as const },
+  { label: "Home", to: "/", color: "stone" as const },
 ];
 
 export default function page() {
   const { data: session, status } = useSession();
   const router = useRouter();
-
-  const menuItems = [
-    { label: "About Tataskweyak", to: "/pages/AboutTCN", color: "stone" as const },
-    { label: "About Who We Are", to: "/pages/WorldViewHome", color: "stone" as const },
-    { label: "Photo Gallery", to: "/pages/PhotoGallery", color: "stone" as const },
-    { label: "Home", to: "/", color: "stone" as const },
-  ];
 
   if (status === "loading") {
     return (
@@ -98,6 +99,22 @@ export default function page() {
       <div className="pt-16 lg:pt-16">
         {/* 3-Column Social Media Style Layout */}
         <div className="max-w-7xl mx-auto px-4 py-6">
+          {/* Back Button */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mb-4"
+          >
+            <button
+              onClick={() => router.back()}
+              className="flex items-center gap-2 px-4 py-2 text-stone-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-sm font-medium">Back</span>
+            </button>
+          </motion.div>
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
             {/* LEFT SIDEBAR - User Profile Card */}

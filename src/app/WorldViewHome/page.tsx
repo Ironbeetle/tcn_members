@@ -9,17 +9,17 @@ export default function WorldViewHome() {
     const menuItems = [
         { 
       label: "About Tataskweyak", 
-      to: "/pages/AboutTCN", 
+      to: "/AboutTCN", 
       color: "stone" as const 
     },
     { 
       label: "About Who We Are", 
-      to: "/pages/WorldViewHome", 
+      to: "/WorldViewHome", 
       color: "stone" as const 
     },
     { 
       label: "Photo Gallery", 
-      to: "/pages/PhotoGallery", 
+      to: "/PhotoGallery", 
       color: "stone" as const 
     },
     { 

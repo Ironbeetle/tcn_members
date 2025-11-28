@@ -1,9 +1,8 @@
 'use client'
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Hamburger } from '@/components/Hamburger';
 import { UserSessionBar } from '@/components/UserSessionBar';
 import { motion } from 'framer-motion';
 import { queryBulletins } from '@/lib/actions';
@@ -16,7 +15,8 @@ import {
   Calendar, 
   Bell,
   Filter,
-  Pin
+  Pin,
+  ArrowLeft
 } from 'lucide-react';
 
 // Categories from schema enum
@@ -81,7 +81,7 @@ type Bulletin = {
   updated: Date;
 };
 
-export default function TCN_BulletinBoard() {
+export default function page() {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [bulletins, setBulletins] = useState<Bulletin[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,6 +91,8 @@ export default function TCN_BulletinBoard() {
 
   // Fetch bulletins from database
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchBulletins() {
       try {
         setLoading(true);
@@ -100,31 +102,34 @@ export default function TCN_BulletinBoard() {
         
         const result = await queryBulletins(params);
         
-        if (result.success && result.data) {
-          setBulletins(result.data.bulletins);
-          setError(null);
-        } else {
-          setError(result.error || 'Failed to load bulletins');
+        if (isMounted) {
+          if (result.success && result.data) {
+            setBulletins(result.data.bulletins);
+            setError(null);
+          } else {
+            setError(result.error || 'Failed to load bulletins');
+          }
         }
       } catch (err) {
-        setError('An error occurred while loading bulletins');
-        console.error(err);
+        if (isMounted) {
+          setError('An error occurred while loading bulletins');
+          console.error(err);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
 
     if (status === 'authenticated') {
       fetchBulletins();
     }
-  }, [selectedCategory, status]);
 
-  const menuItems = [
-    { label: "About Tataskweyak", to: "/pages/AboutTCN", color: "stone" as const },
-    { label: "About Who We Are", to: "/pages/WorldViewHome", color: "stone" as const },
-    { label: "Photo Gallery", to: "/pages/PhotoGallery", color: "stone" as const },
-    { label: "Home", to: "/", color: "stone" as const },
-  ];
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCategory, status]);
 
   if (status === "loading") {
     return (
@@ -141,20 +146,28 @@ export default function TCN_BulletinBoard() {
 
   // Since we're fetching from DB, bulletins are already filtered by category
   // For now, we'll treat the first 2 as pinned (you can add a pinned field to schema later)
-  const pinnedPosts = bulletins.slice(0, 2);
-  const regularPosts = bulletins.slice(2);
+  const pinnedPosts = useMemo(() => bulletins.slice(0, 2), [bulletins]);
+  const regularPosts = useMemo(() => bulletins.slice(2), [bulletins]);
 
   return (
     <div className="w-full min-h-screen bg-stone-100">
-      {/* Fixed Top Navigation */}
+      {/* Fixed Top bar */}
       <div className="fixed top-0 z-100 w-full shadow-md">
-        <div className="lg:hidden">
-          <Hamburger menuItems={menuItems} showBackButton={false} />
-        </div>
         <UserSessionBar showLogo={true} logoSrc="/tcnlogolg.png" />
       </div>
       
       <div className="pt-16 lg:pt-16">
+        {/* Back Button */}
+        <div className="max-w-[80vw] mx-auto px-4 pt-4">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-stone-600 hover:text-amber-700 transition-colors mb-2"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-medium">Back</span>
+          </button>
+        </div>
+
         {/* 3-Column Layout */}
         <div className="max-w-[80vw] mx-auto px-4 py-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { signIn } from "next-auth/react"
 import { z } from "zod"
+import { sendPasswordResetEmail } from "./email"
 
 // Validation schemas
 const registerSchema = z.object({
@@ -186,26 +187,28 @@ export async function requestPasswordReset(email: string): Promise<ActionResult>
       }
     }
 
-    // Generate reset token
-    const crypto = require("crypto")
-    const resetToken = crypto.randomBytes(32).toString("hex")
-    const resetTokenExpiry = new Date(Date.now() + 3600000) // 1 hour from now
+    // Generate 4-digit PIN
+    const pin = Math.floor(1000 + Math.random() * 9000).toString()
+    const pinExpiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
 
-    // Save reset token to database
+    // Save PIN to database
     await prisma.fnauth.update({
       where: { id: authRecord.id },
       data: {
-        resetToken,
-        resetTokenExpiry,
+        pin,
+        pinExpiresAt,
       },
     })
 
-    // TODO: Send email with reset link
-    // For now, we'll log it in development
-    const resetLink = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`
+    // Send PIN via email
+    console.log('[Password Reset] Sending PIN to user:', authRecord.email);
+    const emailResult = await sendPasswordResetEmail(authRecord.email, pin);
     
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`Password reset link for ${authRecord.email}: ${resetLink}`)
+    if (!emailResult.success) {
+      console.error('[Password Reset] Failed to send password reset email:', emailResult.error);
+      // Still return success to not reveal if user exists, but log the error
+    } else {
+      console.log('[Password Reset] PIN email sent successfully to:', authRecord.email);
     }
 
     return {
