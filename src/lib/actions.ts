@@ -34,6 +34,12 @@ import {
   bulletinCreateSchema,
   bulletinUpdateSchema,
   bulletinQuerySchema,
+  fillableFormCreateSchema,
+  fillableFormUpdateSchema,
+  fillableFormQuerySchema,
+  formSubmissionCreateSchema,
+  formSubmissionUpdateSchema,
+  formSubmissionQuerySchema,
   type FnmemberCreate,
   type FnmemberUpdate,
   type FnmemberQuery,
@@ -62,6 +68,12 @@ import {
   type BulletinCreate,
   type BulletinUpdate,
   type BulletinQuery,
+  type FillableFormCreate,
+  type FillableFormUpdate,
+  type FillableFormQuery,
+  type FormSubmissionCreate,
+  type FormSubmissionUpdate,
+  type FormSubmissionQuery,
 } from "./validation";
 
 const prisma = new PrismaClient();
@@ -1257,6 +1269,466 @@ export async function getBulletinsByCategory(category: string, limit: number = 1
     });
 
     return { success: true, data: bulletins };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+// ==================== PROFILE IMAGE ACTIONS ====================
+
+export async function uploadProfileImage(memberId: string, formData: FormData): Promise<ActionResult<{ imageUrl: string }>> {
+  try {
+    const { writeFile, mkdir, unlink } = await import('fs/promises');
+    const { existsSync } = await import('fs');
+    const path = await import('path');
+    const sharp = await import('sharp');
+
+    const file = formData.get('image') as File;
+    
+    if (!file) {
+      return { success: false, error: 'No image file provided' };
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      return { success: false, error: 'Invalid file type. Only JPEG, PNG, and WebP are allowed.' };
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      return { success: false, error: 'File size exceeds 5MB limit' };
+    }
+
+    // Convert file to buffer
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    // Process image with sharp: resize and optimize
+    const processedImage = await sharp.default(buffer)
+      .resize(300, 300, {
+        fit: 'cover',
+        position: 'center'
+      })
+      .jpeg({ quality: 85 })
+      .toBuffer();
+
+    // Create member-specific directory
+    const memberDir = path.join(process.cwd(), 'public', 'profiles', memberId);
+    
+    if (!existsSync(memberDir)) {
+      await mkdir(memberDir, { recursive: true });
+    }
+
+    // Delete old image if exists
+    const oldImagePath = path.join(memberDir, 'avatar.jpg');
+    if (existsSync(oldImagePath)) {
+      await unlink(oldImagePath);
+    }
+
+    // Save new image
+    const imagePath = path.join(memberDir, 'avatar.jpg');
+    await writeFile(imagePath, processedImage);
+
+    // Update database with image URL
+    const imageUrl = `/profiles/${memberId}/avatar.jpg?t=${Date.now()}`;
+    
+    await prisma.profile.updateMany({
+      where: {
+        fnmemberId: memberId
+      },
+      data: {
+        image_url: imageUrl
+      }
+    });
+
+    revalidatePath('/Member_Account');
+
+    return {
+      success: true,
+      data: { imageUrl }
+    };
+
+  } catch (error: any) {
+    console.error('Error uploading profile image:', error);
+    return { success: false, error: 'Failed to upload image' };
+  }
+}
+
+export async function deleteProfileImage(memberId: string): Promise<ActionResult<void>> {
+  try {
+    const { unlink } = await import('fs/promises');
+    const { existsSync } = await import('fs');
+    const path = await import('path');
+
+    // Delete image file
+    const imagePath = path.join(
+      process.cwd(), 
+      'public', 
+      'profiles', 
+      memberId, 
+      'avatar.jpg'
+    );
+    
+    if (existsSync(imagePath)) {
+      await unlink(imagePath);
+    }
+
+    // Update database to remove image URL
+    await prisma.profile.updateMany({
+      where: {
+        fnmemberId: memberId
+      },
+      data: {
+        image_url: null
+      }
+    });
+
+    revalidatePath('/Member_Account');
+
+    return { success: true };
+
+  } catch (error: any) {
+    console.error('Error deleting profile image:', error);
+    return { success: false, error: 'Failed to delete image' };
+  }
+}
+
+// ==================== FILLABLE FORM ACTIONS ====================
+
+export async function createFillableForm(data: FillableFormCreate): Promise<ActionResult<any>> {
+  try {
+    const validatedData = fillableFormCreateSchema.parse(data);
+    
+    const form = await prisma.fillable_form.create({
+      data: validatedData,
+    });
+
+    revalidatePath('/TCN_Forms');
+    return { success: true, data: form };
+  } catch (error: any) {
+    if (error.name === 'ZodError') {
+      return { success: false, errors: error.flatten().fieldErrors };
+    }
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+export async function updateFillableForm(data: FillableFormUpdate): Promise<ActionResult<any>> {
+  try {
+    const validatedData = fillableFormUpdateSchema.parse(data);
+    const { id, ...updateData } = validatedData;
+
+    const form = await prisma.fillable_form.update({
+      where: { id },
+      data: updateData,
+    });
+
+    revalidatePath('/TCN_Forms');
+    return { success: true, data: form };
+  } catch (error: any) {
+    if (error.name === 'ZodError') {
+      return { success: false, errors: error.flatten().fieldErrors };
+    }
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+export async function deleteFillableForm(id: string): Promise<ActionResult<void>> {
+  try {
+    await prisma.fillable_form.delete({
+      where: { id },
+    });
+
+    revalidatePath('/TCN_Forms');
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+export async function queryFillableForms(query?: FillableFormQuery): Promise<ActionResult<any>> {
+  try {
+    const validatedQuery = fillableFormQuerySchema.parse(query || {});
+    const { id, category, is_active, searchTerm, page, limit, sortBy, sortOrder } = validatedQuery;
+
+    const where: any = {};
+    if (id) where.id = id;
+    if (category) where.category = category;
+    if (is_active !== undefined) where.is_active = is_active;
+    if (searchTerm) {
+      where.OR = [
+        { title: { contains: searchTerm, mode: 'insensitive' } },
+        { description: { contains: searchTerm, mode: 'insensitive' } },
+      ];
+    }
+
+    const [forms, total] = await Promise.all([
+      prisma.fillable_form.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      prisma.fillable_form.count({ where }),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        forms,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+    };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+export async function getFillableFormById(id: string): Promise<ActionResult<any>> {
+  try {
+    const form = await prisma.fillable_form.findUnique({
+      where: { id },
+      include: {
+        submissions: {
+          orderBy: { created: 'desc' },
+          take: 10,
+        },
+      },
+    });
+
+    if (!form) {
+      return { success: false, error: 'Form not found' };
+    }
+
+    return { success: true, data: form };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+// ==================== FORM SUBMISSION ACTIONS ====================
+
+export async function createFormSubmission(data: FormSubmissionCreate): Promise<ActionResult<any>> {
+  try {
+    const validatedData = formSubmissionCreateSchema.parse(data);
+    
+    const submission = await prisma.form_submission.create({
+      data: {
+        ...validatedData,
+        status: 'PENDING',
+      },
+      include: {
+        form: true,
+      },
+    });
+
+    revalidatePath('/TCN_Forms');
+    return { success: true, data: submission };
+  } catch (error: any) {
+    if (error.name === 'ZodError') {
+      return { success: false, errors: error.flatten().fieldErrors };
+    }
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+export async function updateFormSubmission(data: FormSubmissionUpdate): Promise<ActionResult<any>> {
+  try {
+    const validatedData = formSubmissionUpdateSchema.parse(data);
+    const { id, ...updateData } = validatedData;
+
+    const submission = await prisma.form_submission.update({
+      where: { id },
+      data: updateData,
+      include: {
+        form: true,
+      },
+    });
+
+    revalidatePath('/TCN_Forms');
+    return { success: true, data: submission };
+  } catch (error: any) {
+    if (error.name === 'ZodError') {
+      return { success: false, errors: error.flatten().fieldErrors };
+    }
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+export async function submitFormAndGeneratePDF(
+  submissionId: string
+): Promise<ActionResult<{ filled_pdf_url: string }>> {
+  try {
+    const { PDFDocument } = await import('pdf-lib');
+    const { readFile, writeFile, mkdir } = await import('fs/promises');
+    const { existsSync } = await import('fs');
+    const path = await import('path');
+
+    // Get the submission with form data
+    const submission = await prisma.form_submission.findUnique({
+      where: { id: submissionId },
+      include: {
+        form: true,
+        fnmember: true,
+      },
+    });
+
+    if (!submission) {
+      return { success: false, error: 'Submission not found' };
+    }
+
+    // Load the PDF template
+    const pdfPath = path.join(process.cwd(), 'public', submission.form.pdf_url);
+    const pdfBytes = await readFile(pdfPath);
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+
+    // Get the form from the PDF
+    const form = pdfDoc.getForm();
+    const formData = submission.form_data as Record<string, any>;
+    const formFields = submission.form.form_fields as any[];
+
+    // Fill in the PDF fields
+    for (const field of formFields) {
+      const value = formData[field.name];
+      if (value === undefined || value === null) continue;
+
+      const pdfFieldName = field.pdfFieldName || field.name;
+      
+      try {
+        switch (field.type) {
+          case 'text':
+          case 'textarea':
+          case 'email':
+          case 'phone':
+          case 'number':
+            const textField = form.getTextField(pdfFieldName);
+            textField.setText(String(value));
+            break;
+          case 'checkbox':
+            const checkBox = form.getCheckBox(pdfFieldName);
+            if (value) checkBox.check();
+            else checkBox.uncheck();
+            break;
+          case 'select':
+          case 'radio':
+            const dropdown = form.getDropdown(pdfFieldName);
+            dropdown.select(String(value));
+            break;
+          case 'date':
+            const dateField = form.getTextField(pdfFieldName);
+            dateField.setText(new Date(value).toLocaleDateString());
+            break;
+        }
+      } catch (e) {
+        console.warn(`Could not fill field ${pdfFieldName}:`, e);
+      }
+    }
+
+    // Flatten the form so fields can't be edited
+    form.flatten();
+
+    // Save the filled PDF
+    const filledPdfBytes = await pdfDoc.save();
+    
+    // Create directory for filled PDFs
+    const filledPdfDir = path.join(process.cwd(), 'public', 'filled-forms', submission.fnmemberId);
+    if (!existsSync(filledPdfDir)) {
+      await mkdir(filledPdfDir, { recursive: true });
+    }
+
+    const filledPdfFileName = `${submission.form.title.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+    const filledPdfPath = path.join(filledPdfDir, filledPdfFileName);
+    await writeFile(filledPdfPath, filledPdfBytes);
+
+    const filled_pdf_url = `/filled-forms/${submission.fnmemberId}/${filledPdfFileName}`;
+
+    // Update the submission
+    await prisma.form_submission.update({
+      where: { id: submissionId },
+      data: {
+        filled_pdf_url,
+        status: 'SUBMITTED',
+      },
+    });
+
+    revalidatePath('/TCN_Forms');
+    return { success: true, data: { filled_pdf_url } };
+  } catch (error: any) {
+    console.error('Error generating PDF:', error);
+    return { success: false, error: 'Failed to generate PDF' };
+  }
+}
+
+export async function queryFormSubmissions(query?: FormSubmissionQuery): Promise<ActionResult<any>> {
+  try {
+    const validatedQuery = formSubmissionQuerySchema.parse(query || {});
+    const { id, formId, fnmemberId, status, page, limit, sortBy, sortOrder } = validatedQuery;
+
+    const where: any = {};
+    if (id) where.id = id;
+    if (formId) where.formId = formId;
+    if (fnmemberId) where.fnmemberId = fnmemberId;
+    if (status) where.status = status;
+
+    const [submissions, total] = await Promise.all([
+      prisma.form_submission.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { [sortBy]: sortOrder },
+        include: {
+          form: {
+            select: {
+              id: true,
+              title: true,
+              category: true,
+            },
+          },
+        },
+      }),
+      prisma.form_submission.count({ where }),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        submissions,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+    };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+export async function getMemberFormSubmissions(fnmemberId: string): Promise<ActionResult<any>> {
+  try {
+    const submissions = await prisma.form_submission.findMany({
+      where: { fnmemberId },
+      orderBy: { created: 'desc' },
+      include: {
+        form: {
+          select: {
+            id: true,
+            title: true,
+            category: true,
+          },
+        },
+      },
+    });
+
+    return { success: true, data: submissions };
   } catch (error: any) {
     return { success: false, error: handlePrismaError(error) };
   }

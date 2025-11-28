@@ -16,7 +16,10 @@ import {
   Bell,
   Filter,
   Pin,
-  ArrowLeft
+  ArrowLeft,
+  X,
+  ImageIcon,
+  FileText
 } from 'lucide-react';
 
 // Categories from schema enum
@@ -86,8 +89,22 @@ export default function page() {
   const [bulletins, setBulletins] = useState<Bulletin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedBulletin, setSelectedBulletin] = useState<Bulletin | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { data: session, status } = useSession();
   const router = useRouter();
+
+  // Open modal with selected bulletin
+  const openBulletinModal = useCallback((bulletin: Bulletin) => {
+    setSelectedBulletin(bulletin);
+    setIsModalOpen(true);
+  }, []);
+
+  // Close modal
+  const closeBulletinModal = useCallback(() => {
+    setIsModalOpen(false);
+    setSelectedBulletin(null);
+  }, []);
 
   // Fetch bulletins from database
   useEffect(() => {
@@ -131,6 +148,10 @@ export default function page() {
     };
   }, [selectedCategory, status]);
 
+  // Memoized posts - must be before any early returns to follow Rules of Hooks
+  const pinnedPosts = useMemo(() => bulletins.slice(0, 2), [bulletins]);
+  const regularPosts = useMemo(() => bulletins.slice(2), [bulletins]);
+
   if (status === "loading") {
     return (
       <div className="w-full min-h-screen genbkg flex items-center justify-center">
@@ -144,13 +165,72 @@ export default function page() {
     return null;
   }
 
-  // Since we're fetching from DB, bulletins are already filtered by category
-  // For now, we'll treat the first 2 as pinned (you can add a pinned field to schema later)
-  const pinnedPosts = useMemo(() => bulletins.slice(0, 2), [bulletins]);
-  const regularPosts = useMemo(() => bulletins.slice(2), [bulletins]);
-
   return (
-    <div className="w-full min-h-screen bg-stone-100">
+    <div className="w-full min-h-screen genbkg">
+      {/* Bulletin Image Modal */}
+      {isModalOpen && selectedBulletin && (
+        <div 
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={closeBulletinModal}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.2 }}
+            className="relative bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-stone-200 bg-gradient-to-r from-amber-700 to-amber-900">
+              <div className="flex items-center gap-3">
+                <div className={`px-3 py-1 rounded-full text-xs font-semibold bg-white/20 text-white`}>
+                  {categories.find(c => c.value === selectedBulletin.category)?.label}
+                </div>
+                <span className="text-white/80 text-sm">
+                  {new Date(selectedBulletin.created).toLocaleDateString('en-US', { 
+                    month: 'long', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                  })}
+                </span>
+              </div>
+              <button
+                onClick={closeBulletinModal}
+                className="p-2 rounded-full hover:bg-white/20 transition-colors text-white"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
+              {/* Bulletin Image */}
+              <div className="relative w-full bg-stone-100 flex items-center justify-center">
+                {selectedBulletin.poster_url ? (
+                  <img
+                    src={selectedBulletin.poster_url}
+                    alt={selectedBulletin.title}
+                    className="w-full h-auto object-contain max-h-[70vh]"
+                  />
+                ) : (
+                  <div className="w-full h-64 flex flex-col items-center justify-center text-stone-400">
+                    <ImageIcon className="w-16 h-16 mb-2" />
+                    <span>No image available</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Bulletin Details */}
+              <div className="p-6">
+                <h2 className="text-2xl font-bold text-stone-800 mb-2">{selectedBulletin.title}</h2>
+                <p className="text-stone-600 whitespace-pre-wrap">{selectedBulletin.subject}</p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Fixed Top bar */}
       <div className="fixed top-0 z-100 w-full shadow-md">
         <UserSessionBar showLogo={true} logoSrc="/tcnlogolg.png" />
@@ -242,7 +322,8 @@ export default function page() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.05 }}
-                      className="bg-white rounded-xl shadow-sm border-2 border-amber-200 overflow-hidden hover:shadow-md transition-shadow"
+                      onClick={() => openBulletinModal(post)}
+                      className="bg-white rounded-xl shadow-sm border-2 border-amber-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
                     >
                       <div className="p-4">
                         <div className="flex items-start justify-between mb-3">
@@ -257,8 +338,8 @@ export default function page() {
                         <h3 className="font-bold text-lg text-stone-800 mb-2">{post.title}</h3>
                         <p className="text-sm text-stone-600 mb-3 line-clamp-2">{post.subject}</p>
                         <div className="flex items-center justify-between text-xs text-stone-500">
-                          <span>{post.created.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                          <button className="text-amber-700 font-medium hover:text-amber-800">Read More →</button>
+                          <span>{new Date(post.created).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                          <span className="text-amber-700 font-medium hover:text-amber-800">View Details →</span>
                         </div>
                       </div>
                     </motion.div>
@@ -279,7 +360,8 @@ export default function page() {
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.3, delay: index * 0.05 }}
-                      className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden hover:shadow-md hover:border-amber-300 transition-all"
+                      onClick={() => openBulletinModal(post)}
+                      className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden hover:shadow-md hover:border-amber-300 transition-all cursor-pointer"
                     >
                       <div className="p-4">
                         <div className="flex items-center gap-2 mb-3">
@@ -291,8 +373,8 @@ export default function page() {
                         <h3 className="font-bold text-lg text-stone-800 mb-2">{post.title}</h3>
                         <p className="text-sm text-stone-600 mb-3 line-clamp-2">{post.subject}</p>
                         <div className="flex items-center justify-between text-xs text-stone-500">
-                          <span>{post.created.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                          <button className="text-amber-700 font-medium hover:text-amber-800">Read More →</button>
+                          <span>{new Date(post.created).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                          <span className="text-amber-700 font-medium hover:text-amber-800">View Details →</span>
                         </div>
                       </div>
                     </motion.div>
@@ -331,10 +413,10 @@ export default function page() {
               >
                 <h3 className="font-bold text-stone-800 mb-4">Quick Actions</h3>
                 <div className="space-y-2">
-                  <Link href="/TCN_Home" className="block p-3 rounded-lg hover:bg-stone-50 transition-colors">
+                  <Link href="/TCN_Forms" className="block p-3 rounded-lg hover:bg-amber-50 transition-colors">
                     <div className="flex items-center gap-3">
-                      <Users className="w-5 h-5 text-amber-700" />
-                      <span className="text-sm font-medium text-stone-700">Back to Home</span>
+                      <FileText className="w-5 h-5 text-amber-700" />
+                      <span className="text-sm font-medium text-stone-700">Community Forms</span>
                     </div>
                   </Link>
                   <button className="w-full p-3 rounded-lg hover:bg-amber-50 transition-colors text-left">

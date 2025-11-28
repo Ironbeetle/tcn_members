@@ -2,13 +2,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Hamburger } from '@/components/Hamburger';
 import { UserSessionBar } from '@/components/UserSessionBar';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { uploadProfileImage, deleteProfileImage } from '@/lib/actions';
 import { 
   User, 
   Mail, 
@@ -18,16 +19,13 @@ import {
   Edit,
   Save,
   X,
-  ArrowLeft
+  ArrowLeft,
+  Upload,
+  Camera,
+  Trash2
 } from 'lucide-react';
 import Image from 'next/image';
 
-const menuItems = [
-  { label: "About Tataskweyak", to: "/pages/AboutTCN", color: "stone" as const },
-  { label: "About Who We Are", to: "/pages/WorldViewHome", color: "stone" as const },
-  { label: "Photo Gallery", to: "/pages/PhotoGallery", color: "stone" as const },
-  { label: "Home", to: "/", color: "stone" as const },
-];
 
 const contactUpdateSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -49,6 +47,7 @@ type MemberData = {
     community: string;
     o_r_status: string;
     gender: string | null;
+    image_url: string | null;
   } | null;
   barcode: {
     barcode: string;
@@ -58,9 +57,11 @@ type MemberData = {
 export default function MemberAccount() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [memberData, setMemberData] = useState<MemberData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const {
     register,
@@ -155,6 +156,104 @@ export default function MemberAccount() {
     }
   }, [session?.user?.id, memberData]);
 
+  const uploadMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      if (!session?.user?.id) throw new Error('No session');
+      return uploadProfileImage(session.user.id, formData);
+    },
+    onSuccess: (result) => {
+      if (result.success && result.data) {
+        toast.success('Profile image updated successfully');
+        // Update member data with new image URL
+        if (memberData && memberData.profile) {
+          setMemberData({
+            ...memberData,
+            profile: {
+              ...memberData.profile,
+              image_url: result.data.imageUrl
+            }
+          });
+        }
+        setImagePreview(null);
+        queryClient.invalidateQueries({ queryKey: ['memberData', session?.user?.id] });
+      } else {
+        toast.error(result.error || 'Failed to upload image');
+        setImagePreview(null);
+      }
+    },
+    onError: (error) => {
+      console.error('Error uploading image:', error);
+      toast.error('An error occurred while uploading the image');
+      setImagePreview(null);
+    }
+  });
+
+  const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Invalid file type. Only JPEG, PNG, and WebP are allowed.');
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size exceeds 5MB limit');
+      return;
+    }
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload image
+    const formData = new FormData();
+    formData.append('image', file);
+    uploadMutation.mutate(formData);
+  }, [uploadMutation]);
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!session?.user?.id) throw new Error('No session');
+      return deleteProfileImage(session.user.id);
+    },
+    onSuccess: (result) => {
+      if (result.success) {
+        toast.success('Profile image deleted successfully');
+        // Update member data to remove image URL
+        if (memberData && memberData.profile) {
+          setMemberData({
+            ...memberData,
+            profile: {
+              ...memberData.profile,
+              image_url: null
+            }
+          });
+        }
+        queryClient.invalidateQueries({ queryKey: ['memberData', session?.user?.id] });
+      } else {
+        toast.error(result.error || 'Failed to delete image');
+      }
+    },
+    onError: (error) => {
+      console.error('Error deleting image:', error);
+      toast.error('An error occurred while deleting the image');
+    }
+  });
+
+  const handleDeleteImage = useCallback(() => {
+    if (!confirm('Are you sure you want to delete your profile image?')) {
+      return;
+    }
+    deleteMutation.mutate();
+  }, [deleteMutation]);
+
 
 
   if (status === "loading" || loading) {
@@ -182,9 +281,6 @@ export default function MemberAccount() {
     <div className="w-full min-h-screen bg-stone-100">
       {/* Fixed Top Navigation */}
       <div className="fixed top-0 z-50 w-full shadow-md">
-        <div className="lg:hidden">
-          <Hamburger menuItems={menuItems} showBackButton={false} />
-        </div>
         <UserSessionBar showLogo={true} logoSrc="/tcnlogolg.png" />
       </div>
       
@@ -223,6 +319,79 @@ export default function MemberAccount() {
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             {/* Left Column - Account Info */}
             <div className="lg:col-span-3 space-y-6">
+              {/* Profile Image Card */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.05 }}
+                className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6"
+              >
+                <h2 className="text-xl font-bold text-stone-800 mb-4">Photo ID</h2>
+                <div className="flex flex-col sm:flex-row items-center gap-6">
+                  {/* Image Display */}
+                  <div className="relative">
+                    <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-amber-200 bg-stone-100">
+                      {imagePreview ? (
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : memberData.profile?.image_url ? (
+                        <img
+                          src={memberData.profile.image_url}
+                          alt={`${memberData.firstName} ${memberData.lastName}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-100 to-amber-200">
+                          <User className="w-16 h-16 text-amber-700" />
+                        </div>
+                      )}
+                    </div>
+                    {(uploadMutation.isPending || deleteMutation.isPending) && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Upload Controls */}
+                  <div className="flex-1 space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      <label className="flex items-center gap-2 px-4 py-2 bg-amber-700 text-white rounded-lg hover:bg-amber-800 transition-colors cursor-pointer disabled:opacity-50">
+                        <Camera className="w-4 h-4" />
+                        <span className="text-sm font-medium">
+                          {memberData.profile?.image_url ? 'Change Photo' : 'Upload Photo'}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/webp"
+                          onChange={handleImageUpload}
+                          disabled={uploadMutation.isPending || deleteMutation.isPending}
+                          className="hidden"
+                        />
+                      </label>
+                      
+                      {memberData.profile?.image_url && !imagePreview && (
+                        <button
+                          onClick={handleDeleteImage}
+                          disabled={uploadMutation.isPending || deleteMutation.isPending}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span className="text-sm font-medium">Remove</span>
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs text-stone-500">
+                      Recommended: Square image, at least 300x300px. Max size: 5MB. 
+                      Formats: JPEG, PNG, WebP
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
               {/* Personal Information Card */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}

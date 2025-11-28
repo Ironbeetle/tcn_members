@@ -32,6 +32,7 @@ model fnmember {
   profile        Profile[]
   barcode        Barcode[]
   family         Family[]
+  form_submissions form_submission[]
   
   @@schema("fnmemberlist")
 }
@@ -124,5 +125,57 @@ enum Categories{
   EMPLOYMENT
   PROGRAM_EVENTS
   ANNOUNCEMENTS
+  @@schema("tcnbulletin")
+}
+
+model fillable_form {
+  id            String           @id @default(cuid())
+  created       DateTime         @default(now())
+  updated       DateTime         @default(now()) @updatedAt
+  title         String
+  description   String?
+  category      FormCategory     @default(GENERAL)
+  pdf_url       String           // Path to the PDF template
+  form_fields   Json             // JSON array of form field definitions
+  is_active     Boolean          @default(true)
+  submissions   form_submission[]
+
+  @@schema("tcnbulletin")
+}
+
+model form_submission {
+  id            String         @id @default(cuid())
+  created       DateTime       @default(now())
+  updated       DateTime       @default(now()) @updatedAt
+  form_data     Json           // Submitted form field values
+  filled_pdf_url String?       // Path to the generated filled PDF
+  status        SubmissionStatus @default(PENDING)
+  
+  // Relations
+  formId        String
+  form          fillable_form  @relation(fields: [formId], references: [id], onDelete: Cascade)
+  fnmemberId    String
+  fnmember      fnmember       @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
+
+  @@schema("tcnbulletin")
+}
+
+enum FormCategory {
+  GENERAL
+  HEALTH
+  EDUCATION
+  HOUSING
+  EMPLOYMENT
+  RECREATION
+  SOCIAL_SERVICES
+  @@schema("tcnbulletin")
+}
+
+enum SubmissionStatus {
+  PENDING
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
   @@schema("tcnbulletin")
 }

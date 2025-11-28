@@ -87,7 +87,7 @@ export default function page() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-stone-100">
+    <div className="w-full min-h-screen genbkg">
       {/* Fixed Top Navigation */}
       <div className="fixed top-0 z-100 w-full shadow-md">
         <div className="lg:hidden">
