@@ -2,14 +2,15 @@
 
 ## Overview
 
-This API enables **bidirectional synchronization** between the **Master Database Manager** and the **TCN Member Portal**.
+This API enables **bidirectional synchronization** between external applications and the **TCN Member Portal**.
 
 ### Sync Directions
 
 | Direction | Models | Source of Truth | Description |
 |-----------|--------|-----------------|-------------|
-| **Master → Portal** | `fnmember`, `Barcode` | Master DB | Push member data and barcodes to portal |
-| **Portal → Master** | `Profile`, `Family` | Portal | Pull member-updated contact info to master |
+| **Master DB → Portal** | `fnmember`, `Barcode` | Master DB | Push member data and barcodes to portal |
+| **Portal → Master DB** | `Profile`, `Family` | Portal | Pull member-updated contact info to master |
+| **Messaging App → Portal** | `bulletin` (+ posters) | Messaging App | Push bulletins and poster images to portal |
 
 The portal maintains its own authentication system (`fnauth` model) for portal-specific user accounts - this is never synced.
 
@@ -564,6 +565,136 @@ export async function pullAllMemberData(since?: Date) {
 
 ---
 
+## Bulletin Sync API (Messaging App → Portal)
+
+These endpoints allow the messaging app to sync bulletins and poster images to the portal.
+
+### 7. Sync Bulletin
+
+Create or update a bulletin on the portal.
+
+**POST** `/api/sync/bulletin`
+
+```json
+{
+  "sourceId": "clx123...",           // Your BulletinApiLog.id
+  "title": "Community Meeting",
+  "subject": "Monthly community meeting this Saturday at 2pm",
+  "poster_url": "/bulletinboard/clx123.jpg",
+  "category": "CHIEFNCOUNCIL",
+  "userId": "user456..."             // Optional: your User.id
+}
+```
+
+**Categories:** `CHIEFNCOUNCIL`, `HEALTH`, `EDUCATION`, `RECREATION`, `EMPLOYMENT`, `PROGRAM_EVENTS`, `ANNOUNCEMENTS`
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Bulletin synced successfully",
+  "data": {
+    "id": "clb789...",
+    "sourceId": "clx123...",
+    "title": "Community Meeting",
+    "poster_url": "/bulletinboard/clx123.jpg",
+    "category": "CHIEFNCOUNCIL"
+  }
+}
+```
+
+### 8. Upload Poster Image
+
+Upload a poster image for a bulletin. **Call this before syncing the bulletin.**
+
+**POST** `/api/sync/poster` (multipart/form-data)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | File | Yes | Image file (jpeg, png, gif, webp) |
+| `sourceId` | string | Yes | Your BulletinApiLog.id |
+| `filename` | string | No | Original filename |
+
+**Example (curl):**
+```bash
+curl -X POST https://portal.tcn.ca/api/sync/poster \
+  -H "x-api-key: YOUR_KEY" \
+  -F "file=@/path/to/poster.jpg" \
+  -F "sourceId=clx123..." \
+  -F "filename=community-meeting.jpg"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Poster uploaded successfully",
+  "data": {
+    "sourceId": "clx123...",
+    "filename": "clx123.jpg",
+    "poster_url": "/bulletinboard/clx123.jpg",
+    "size": 245678,
+    "contentType": "image/jpeg"
+  }
+}
+```
+
+### 9. Delete Bulletin
+
+**DELETE** `/api/sync/bulletin`
+
+```json
+{
+  "sourceId": "clx123..."
+}
+```
+Or:
+```json
+{
+  "id": "clb789..."
+}
+```
+
+### 10. Delete Poster
+
+**DELETE** `/api/sync/poster`
+
+```json
+{
+  "sourceId": "clx123..."
+}
+```
+
+### Complete Bulletin Workflow
+
+```typescript
+// 1. Upload poster first
+const upload = await fetch('https://portal.tcn.ca/api/sync/poster', {
+  method: 'POST',
+  headers: { 'x-api-key': API_KEY },
+  body: formData,  // Contains file, sourceId, filename
+});
+const { data: { poster_url } } = await upload.json();
+
+// 2. Sync bulletin with poster URL
+const bulletin = await fetch('https://portal.tcn.ca/api/sync/bulletin', {
+  method: 'POST',
+  headers: {
+    'x-api-key': API_KEY,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    sourceId: 'clx123...',
+    title: 'Community Meeting',
+    subject: 'Monthly meeting this Saturday',
+    poster_url,
+    category: 'CHIEFNCOUNCIL',
+  }),
+});
+```
+
+---
+
 ## Environment Variables
 
 Add to `.env` in both applications:
@@ -575,6 +706,12 @@ API_KEYS="key1,key2,key3"
 ```
 
 **Master Database Manager (.env):**
+```env
+PORTAL_API_KEY="your-api-key-here"
+PORTAL_API_URL="https://portal.tcn.ca/api/sync"
+```
+
+**Messaging App (.env):**
 ```env
 PORTAL_API_KEY="your-api-key-here"
 PORTAL_API_URL="https://portal.tcn.ca/api/sync"

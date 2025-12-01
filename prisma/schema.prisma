@@ -114,6 +114,9 @@ model bulletin {
   subject       String
   poster_url    String
   category      Categories @default(CHIEFNCOUNCIL)
+  // Fields for sync with messaging app
+  sourceId      String?    @unique  // ID from the messaging app (BulletinApiLog.id)
+  userId        String?              // User ID from messaging app who created it
   @@schema("tcnbulletin")
 }
 
