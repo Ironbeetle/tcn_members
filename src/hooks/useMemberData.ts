@@ -9,13 +9,13 @@ export interface MemberData {
   first_name: string
   last_name: string
   t_number: string
-  birthdate: string
-  activated: string
+  birthdate: Date | string
+  activated: Date | string
   auth: {
     username: string
     email: string
     verified: boolean
-    lastLogin: string | null
+    lastLogin: Date | string | null
   } | null
   profile: any[]
   barcode: any[]

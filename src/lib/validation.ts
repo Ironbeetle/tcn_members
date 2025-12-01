@@ -401,12 +401,12 @@ export const fillableFormQuerySchema = z.object({
 export const formSubmissionCreateSchema = z.object({
   formId: idSchema,
   fnmemberId: idSchema,
-  form_data: z.record(z.any()), // Dynamic form data based on form fields
+  form_data: z.record(z.string(), z.any()), // Dynamic form data based on form fields
 });
 
 export const formSubmissionUpdateSchema = z.object({
   id: idSchema,
-  form_data: z.record(z.any()).optional(),
+  form_data: z.record(z.string(), z.any()).optional(),
   filled_pdf_url: z.string().optional(),
   status: z.enum([
     "PENDING",

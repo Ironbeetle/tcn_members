@@ -1,10 +1,13 @@
 'use client'
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { UserSessionBar } from '@/components/UserSessionBar';
 import { Hamburger } from '@/components/Hamburger';
 import { motion } from 'framer-motion';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { getMembershipStats } from '@/lib/actions';
 import { 
   Megaphone, 
   Building2, 
@@ -25,7 +28,7 @@ const departments = [
     link: '/TCN_TownHall',
   },
   {
-    title: 'Band Office',
+    title: 'Community Directory',
     description: 'Administrative services and member support',
     icon: Briefcase,
     link: '/TCN_BandOffice',
@@ -35,31 +38,7 @@ const departments = [
     description: 'Leadership updates and governance information',
     icon: Users,
     link: '/TCN_LocalGovernance',
-  },
-  // {
-  //   title: 'Community Health',
-  //   description: 'Health services, wellness programs, and resources',
-  //   icon: Heart,
-  //   link: '/TCN_Members/CommunityHealth',
-  // },
-  // {
-  //   title: 'Jobs & Training',
-  //   description: 'Employment opportunities and skills development',
-  //   icon: Wrench,
-  //   link: '/TCN_Members/JobsTraining',
-  // },
-  // {
-  //   title: 'Education',
-  //   description: 'Learning programs, scholarships, and student support',
-  //   icon: GraduationCap,
-  //   link: '/TCN_Members/Education',
-  // },
-  // {
-  //   title: 'Business Development',
-  //   description: 'Economic initiatives and entrepreneurship support',
-  //   icon: TrendingUp,
-  //   link: '/TCN_Members/BusinessDevelopment',
-  // }
+  }
 ];
 
 const menuItems = [
@@ -69,9 +48,46 @@ const menuItems = [
   { label: "Home", to: "/", color: "stone" as const },
 ];
 
-export default function page() {
+// Pie chart colors
+const CHART_COLORS = ['#059669', '#f59e0b', '#9ca3af']; // green for activated, amber for pending, gray for none
+
+export default function TCNHomePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [memberStats, setMemberStats] = useState<{
+    totalMembers: number;
+    activatedMembers: number;
+    pendingMembers: number;
+    noneMembers: number;
+  } | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  // Fetch membership stats
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const result = await getMembershipStats();
+        if (result.success && result.data) {
+          setMemberStats(result.data);
+        }
+      } catch (error) {
+        console.error('Error fetching membership stats:', error);
+      } finally {
+        setLoadingStats(false);
+      }
+    }
+
+    if (status === 'authenticated') {
+      fetchStats();
+    }
+  }, [status]);
+
+  // Prepare pie chart data
+  const pieChartData = memberStats ? [
+    { name: 'Activated', value: memberStats.activatedMembers, color: CHART_COLORS[0] },
+    { name: 'Pending', value: memberStats.pendingMembers, color: CHART_COLORS[1] },
+    { name: 'Not Activated', value: memberStats.noneMembers, color: CHART_COLORS[2] },
+  ].filter(item => item.value > 0) : [];
 
   if (status === "loading") {
     return (
@@ -145,7 +161,7 @@ export default function page() {
                 transition={{ duration: 0.5, delay: 0.1 }}
                 className="bg-white rounded-2xl shadow-sm border border-stone-200 p-4 sticky top-24"
               >
-                <h3 className="font-bold text-stone-800 mb-3 text-sm">Departments</h3>
+                <h3 className="font-bold text-stone-800 mb-3 text-sm">Tataskweyak</h3>
                 <div className="space-y-1">
                   {departments.map((dept, index) => (
                     <Link key={dept.title} href={dept.link}>
@@ -176,7 +192,7 @@ export default function page() {
                   <Megaphone className="w-8 h-8" />
                   <h2 className="text-2xl font-bold">Tansi, {session?.user?.firstName}!</h2>
                 </div>
-                <p className="text-amber-50">Welcome to the Tataskweyak Cree Nation member portal. Stay connected with your community.</p>
+                <p className="text-amber-50">Welcome to (Cree Name for this Service).</p>
               </motion.div>
 
               {/* Bulletin Board Quick Access */}
@@ -274,24 +290,98 @@ export default function page() {
 
             {/* RIGHT SIDEBAR - Quick Links & Stats */}
             <aside className="lg:col-span-3 space-y-4">
-              {/* Stats Card */}
+              {/* Stats Card with Pie Chart */}
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
                 className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl shadow-sm border border-amber-200 p-4 sticky top-24"
               >
-                <h3 className="font-bold text-amber-900 mb-3">Community Stats</h3>
-                <div className="space-y-3">
-                  <div>
-                    <div className="text-2xl font-bold text-amber-700">4,000+</div>
-                    <div className="text-xs text-amber-800">Total Members</div>
+                <h3 className="font-bold text-amber-900 mb-3">Member Activation Status</h3>
+                
+                {loadingStats ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
                   </div>
-                  <div className="border-t border-amber-200 pt-2">
-                    <div className="text-2xl font-bold text-amber-700">7</div>
-                    <div className="text-xs text-amber-800">Active Departments</div>
+                ) : memberStats ? (
+                  <>
+                    {/* Pie Chart */}
+                    <div className="h-48 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={pieChartData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={40}
+                            outerRadius={70}
+                            paddingAngle={2}
+                            dataKey="value"
+                          >
+                            {pieChartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            formatter={(value: number) => [value.toLocaleString(), 'Members']}
+                            contentStyle={{ 
+                              backgroundColor: 'white', 
+                              border: '1px solid #e7e5e4',
+                              borderRadius: '8px',
+                              fontSize: '12px'
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* Stats Legend */}
+                    <div className="space-y-2 mt-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-emerald-600"></div>
+                          <span className="text-xs text-stone-600">Activated</span>
+                        </div>
+                        <span className="text-sm font-bold text-emerald-700">
+                          {memberStats.activatedMembers.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                          <span className="text-xs text-stone-600">Pending</span>
+                        </div>
+                        <span className="text-sm font-bold text-amber-600">
+                          {memberStats.pendingMembers.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-stone-400"></div>
+                          <span className="text-xs text-stone-600">Not Activated</span>
+                        </div>
+                        <span className="text-sm font-bold text-stone-500">
+                          {memberStats.noneMembers.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="border-t border-amber-200 pt-2 mt-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-amber-800">Total Members</span>
+                          <span className="text-lg font-bold text-amber-700">
+                            {memberStats.totalMembers.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="text-xs text-amber-700 mt-1">
+                          {((memberStats.activatedMembers / memberStats.totalMembers) * 100).toFixed(1)}% activated
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-4 text-stone-500 text-sm">
+                    Unable to load stats
                   </div>
-                </div>
+                )}
               </motion.div>
             </aside>
           </div>

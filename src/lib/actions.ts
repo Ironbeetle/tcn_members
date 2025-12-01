@@ -4,7 +4,6 @@ import { PrismaClient } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
-import { sendPasswordResetEmail } from "./email";
 import {
   fnmemberCreateSchema,
   fnmemberUpdateSchema,
@@ -18,15 +17,6 @@ import {
   familyCreateSchema,
   familyUpdateSchema,
   familyQuerySchema,
-  userCreateSchema,
-  userUpdateSchema,
-  userQuerySchema,
-  loginSchema,
-  passwordResetRequestSchema,
-  passwordResetSchema,
-  changePasswordSchema,
-  sessionCreateSchema,
-  sessionUpdateSchema,
   memberWithRelationsCreateSchema,
   memberWithRelationsUpdateSchema,
   bulkDeleteSchema,
@@ -52,15 +42,6 @@ import {
   type FamilyCreate,
   type FamilyUpdate,
   type FamilyQuery,
-  type UserCreate,
-  type UserUpdate,
-  type UserQuery,
-  type Login,
-  type PasswordResetRequest,
-  type PasswordReset,
-  type ChangePassword,
-  type SessionCreate,
-  type SessionUpdate,
   type MemberWithRelationsCreate,
   type MemberWithRelationsUpdate,
   type BulkDelete,
@@ -545,329 +526,6 @@ export async function getFamilies(query?: FamilyQuery): Promise<ActionResult<any
   }
 }
 
-// ==================== USER ACTIONS ====================
-
-export async function createUser(data: UserCreate): Promise<ActionResult<any>> {
-  try {
-    const validatedData = userCreateSchema.parse(data);
-    
-    // Hash password
-    const hashedPassword = await bcrypt.hash(validatedData.password, 12);
-    
-    const user = await prisma.user.create({
-      data: {
-        ...validatedData,
-        password: hashedPassword,
-      },
-      select: {
-        id: true,
-        email: true,
-        first_name: true,
-        last_name: true,
-        department: true,
-        role: true,
-        created: true,
-      },
-    });
-
-    revalidatePath("/users");
-    return { success: true, data: user };
-  } catch (error: any) {
-    if (error.name === "ZodError") {
-      return { success: false, errors: error.flatten().fieldErrors };
-    }
-    return { success: false, error: handlePrismaError(error) };
-  }
-}
-
-export async function updateUser(data: UserUpdate): Promise<ActionResult<any>> {
-  try {
-    const validatedData = userUpdateSchema.parse(data);
-    const { id, password, ...updateData } = validatedData;
-    
-    // Hash password if provided
-    const finalUpdateData: any = { ...updateData };
-    if (password) {
-      finalUpdateData.password = await bcrypt.hash(password, 12);
-    }
-    
-    const user = await prisma.user.update({
-      where: { id },
-      data: finalUpdateData,
-      select: {
-        id: true,
-        email: true,
-        first_name: true,
-        last_name: true,
-        department: true,
-        role: true,
-        created: true,
-      },
-    });
-
-    revalidatePath("/users");
-    return { success: true, data: user };
-  } catch (error: any) {
-    if (error.name === "ZodError") {
-      return { success: false, errors: error.flatten().fieldErrors };
-    }
-    return { success: false, error: handlePrismaError(error) };
-  }
-}
-
-export async function deleteUser(id: string): Promise<ActionResult<void>> {
-  try {
-    await prisma.user.delete({
-      where: { id },
-    });
-
-    revalidatePath("/users");
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: handlePrismaError(error) };
-  }
-}
-
-export async function getUsers(query?: UserQuery): Promise<ActionResult<any>> {
-  try {
-    const validatedQuery = userQuerySchema.parse(query || {});
-    const { page, limit, sortBy, sortOrder, ...filters } = validatedQuery;
-    
-    const skip = (page - 1) * limit;
-    
-    const where: any = {};
-    if (filters.id) where.id = filters.id;
-    if (filters.email) where.email = { contains: filters.email, mode: "insensitive" };
-    if (filters.department) where.department = filters.department;
-    if (filters.role) where.role = filters.role;
-
-    const [users, total] = await Promise.all([
-      prisma.user.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { [sortBy]: sortOrder },
-        select: {
-          id: true,
-          email: true,
-          first_name: true,
-          last_name: true,
-          department: true,
-          role: true,
-          created: true,
-          lastLogin: true,
-        },
-      }),
-      prisma.user.count({ where }),
-    ]);
-
-    return {
-      success: true,
-      data: {
-        users,
-        pagination: {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit),
-        },
-      },
-    };
-  } catch (error: any) {
-    if (error.name === "ZodError") {
-      return { success: false, errors: error.flatten().fieldErrors };
-    }
-    return { success: false, error: handlePrismaError(error) };
-  }
-}
-
-// ==================== AUTHENTICATION ACTIONS ====================
-
-export async function loginUser(data: Login): Promise<ActionResult<any>> {
-  try {
-    const validatedData = loginSchema.parse(data);
-    
-    const user = await prisma.user.findUnique({
-      where: { email: validatedData.email },
-    });
-
-    if (!user) {
-      return { success: false, error: "Invalid credentials" };
-    }
-
-    // Check if account is locked
-    if (user.lockedUntil && user.lockedUntil > new Date()) {
-      return { success: false, error: "Account is temporarily locked" };
-    }
-
-    const isValidPassword = await bcrypt.compare(validatedData.password, user.password);
-
-    if (!isValidPassword) {
-      // Increment login attempts
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          loginAttempts: user.loginAttempts + 1,
-          lockedUntil: user.loginAttempts >= 4 ? new Date(Date.now() + 15 * 60 * 1000) : null, // Lock for 15 minutes after 5 attempts
-        },
-      });
-      return { success: false, error: "Invalid credentials" };
-    }
-
-    // Reset login attempts and update last login
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        loginAttempts: 0,
-        lockedUntil: null,
-        lastLogin: new Date(),
-      },
-    });
-
-    return {
-      success: true,
-      data: {
-        id: user.id,
-        email: user.email,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        department: user.department,
-        role: user.role,
-      },
-    };
-  } catch (error: any) {
-    if (error.name === "ZodError") {
-      return { success: false, errors: error.flatten().fieldErrors };
-    }
-    return { success: false, error: handlePrismaError(error) };
-  }
-}
-
-export async function requestPasswordReset(data: PasswordResetRequest): Promise<ActionResult<void>> {
-  try {
-    const validatedData = passwordResetRequestSchema.parse(data);
-    
-    const user = await prisma.user.findUnique({
-      where: { email: validatedData.email },
-    });
-
-    if (!user) {
-      // Don't reveal if user exists
-      return { success: true };
-    }
-
-    // Generate 4-digit PIN
-    const pin = Math.floor(1000 + Math.random() * 9000).toString();
-    const pinExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        pin,
-        pinExpiresAt,
-        passwordResetRequested: new Date(),
-      },
-    });
-
-    // Send PIN via email
-    console.log('[Password Reset] Sending PIN to user:', user.email);
-    const emailResult = await sendPasswordResetEmail(user.email, pin);
-    
-    if (!emailResult.success) {
-      console.error('[Password Reset] Failed to send password reset email:', emailResult.error);
-      // Still return success to not reveal if user exists, but log the error
-    } else {
-      console.log('[Password Reset] PIN email sent successfully to:', user.email);
-    }
-
-    return { success: true };
-  } catch (error: any) {
-    if (error.name === "ZodError") {
-      return { success: false, errors: error.flatten().fieldErrors };
-    }
-    return { success: false, error: handlePrismaError(error) };
-  }
-}
-
-export async function resetPassword(data: PasswordReset): Promise<ActionResult<void>> {
-  try {
-    const validatedData = passwordResetSchema.parse(data);
-    
-    const user = await prisma.user.findUnique({
-      where: { email: validatedData.email },
-    });
-
-    if (!user || !user.pin || !user.pinExpiresAt) {
-      return { success: false, error: "Invalid reset request" };
-    }
-
-    if (user.pinExpiresAt < new Date()) {
-      return { success: false, error: "PIN has expired" };
-    }
-
-    if (user.pin !== validatedData.pin) {
-      return { success: false, error: "Invalid PIN" };
-    }
-
-    const hashedPassword = await bcrypt.hash(validatedData.newPassword, 12);
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        password: hashedPassword,
-        pin: null,
-        pinExpiresAt: null,
-        passwordResetCompleted: new Date(),
-        loginAttempts: 0,
-        lockedUntil: null,
-      },
-    });
-
-    return { success: true };
-  } catch (error: any) {
-    if (error.name === "ZodError") {
-      return { success: false, errors: error.flatten().fieldErrors };
-    }
-    return { success: false, error: handlePrismaError(error) };
-  }
-}
-
-export async function changePassword(userId: string, data: ChangePassword): Promise<ActionResult<void>> {
-  try {
-    const validatedData = changePasswordSchema.parse(data);
-    
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      return { success: false, error: "User not found" };
-    }
-
-    const isValidPassword = await bcrypt.compare(validatedData.currentPassword, user.password);
-
-    if (!isValidPassword) {
-      return { success: false, error: "Current password is incorrect" };
-    }
-
-    const hashedPassword = await bcrypt.hash(validatedData.newPassword, 12);
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        password: hashedPassword,
-      },
-    });
-
-    return { success: true };
-  } catch (error: any) {
-    if (error.name === "ZodError") {
-      return { success: false, errors: error.flatten().fieldErrors };
-    }
-    return { success: false, error: handlePrismaError(error) };
-  }
-}
-
 // ==================== COMBINED OPERATIONS ====================
 
 export async function createMemberWithRelations(data: MemberWithRelationsCreate): Promise<ActionResult<any>> {
@@ -1077,61 +735,19 @@ export async function bulkUpdateRecords(table: string, data: BulkUpdate): Promis
   }
 }
 
-// ==================== SESSION ACTIONS ====================
-
-export async function createSession(data: SessionCreate): Promise<ActionResult<any>> {
-  try {
-    const validatedData = sessionCreateSchema.parse(data);
-    
-    const session = await prisma.session.create({
-      data: validatedData,
-    });
-
-    return { success: true, data: session };
-  } catch (error: any) {
-    if (error.name === "ZodError") {
-      return { success: false, errors: error.flatten().fieldErrors };
-    }
-    return { success: false, error: handlePrismaError(error) };
-  }
-}
-
-export async function deleteSession(sessionToken: string): Promise<ActionResult<void>> {
-  try {
-    await prisma.session.delete({
-      where: { sessionToken },
-    });
-
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: handlePrismaError(error) };
-  }
-}
-
-export async function cleanupExpiredSessions(): Promise<ActionResult<void>> {
-  try {
-    await prisma.session.deleteMany({
-      where: {
-        expires: {
-          lt: new Date(),
-        },
-      },
-    });
-
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: handlePrismaError(error) };
-  }
-}
-
 // ==================== BULLETIN ACTIONS ====================
 
 export async function createBulletin(data: BulletinCreate): Promise<ActionResult<any>> {
   try {
     const validatedData = bulletinCreateSchema.parse(data);
     
+    // Filter out undefined values to match Prisma's requirements
+    const createData = Object.fromEntries(
+      Object.entries(validatedData).filter(([_, value]) => value !== undefined)
+    );
+    
     const bulletin = await prisma.bulletin.create({
-      data: validatedData,
+      data: createData as any,
     });
 
     revalidatePath("/TCN_BulletinBoard");
@@ -1196,7 +812,7 @@ export async function getBulletin(id: string): Promise<ActionResult<any>> {
   }
 }
 
-export async function queryBulletins(params: BulletinQuery = {}): Promise<ActionResult<any>> {
+export async function queryBulletins(params: Partial<BulletinQuery> = {}): Promise<ActionResult<any>> {
   try {
     const validatedParams = bulletinQuerySchema.parse(params);
     const { page, limit, sortBy, sortOrder, category, searchTerm } = validatedParams;
@@ -1520,7 +1136,9 @@ export async function createFormSubmission(data: FormSubmissionCreate): Promise<
     
     const submission = await prisma.form_submission.create({
       data: {
-        ...validatedData,
+        formId: validatedData.formId,
+        fnmemberId: validatedData.fnmemberId,
+        form_data: validatedData.form_data as any,
         status: 'PENDING',
       },
       include: {
@@ -1545,7 +1163,7 @@ export async function updateFormSubmission(data: FormSubmissionUpdate): Promise<
 
     const submission = await prisma.form_submission.update({
       where: { id },
-      data: updateData,
+      data: updateData as any,
       include: {
         form: true,
       },
@@ -1729,6 +1347,41 @@ export async function getMemberFormSubmissions(fnmemberId: string): Promise<Acti
     });
 
     return { success: true, data: submissions };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+// ==================== MEMBERSHIP STATS ACTIONS ====================
+
+export async function getMembershipStats(): Promise<ActionResult<{
+  totalMembers: number;
+  activatedMembers: number;
+  pendingMembers: number;
+  noneMembers: number;
+}>> {
+  try {
+    const [totalMembers, activatedMembers, pendingMembers] = await Promise.all([
+      prisma.fnmember.count(),
+      prisma.fnmember.count({
+        where: { activated: 'ACTIVATED' }
+      }),
+      prisma.fnmember.count({
+        where: { activated: 'PENDING' }
+      }),
+    ]);
+
+    const noneMembers = totalMembers - activatedMembers - pendingMembers;
+
+    return {
+      success: true,
+      data: {
+        totalMembers,
+        activatedMembers,
+        pendingMembers,
+        noneMembers,
+      },
+    };
   } catch (error: any) {
     return { success: false, error: handlePrismaError(error) };
   }
