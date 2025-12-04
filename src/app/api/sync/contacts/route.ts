@@ -67,7 +67,14 @@ export async function GET(request: NextRequest) {
 
     // Build where clause
     const where: any = {
-      ...(includeDeceased === 'false' && { deceased: null }),
+      // Include deceased='no' or null as "not deceased", exclude only 'yes'/'deceased' values
+      ...(includeDeceased === 'false' && { 
+        OR: [
+          { deceased: null },
+          { deceased: 'no' },
+          { deceased: '' },
+        ]
+      }),
       ...(activated !== 'all' && { 
         activated: activated === 'true' ? 'ACTIVATED' : { not: 'ACTIVATED' }
       }),
@@ -114,23 +121,22 @@ export async function GET(request: NextRequest) {
       members.pop();
     }
 
-    // Format results for messaging
-    const contacts = members
-      .filter(m => m.profile.length > 0)
-      .map(member => {
-        const profile = member.profile[0];
+    // Format results for messaging - include members even without profiles
+    const contacts = members.map(member => {
+        const profile = member.profile[0] || null;
         return {
           memberId: member.id,
           t_number: member.t_number,
           name: `${member.first_name} ${member.last_name}`,
           firstName: member.first_name,
           lastName: member.last_name,
-          ...(fields !== 'email' && profile.phone_number && { phone: profile.phone_number }),
-          ...(fields !== 'phone' && profile.email && { email: profile.email }),
-          community: profile.community,
-          status: profile.o_r_status,
+          ...(fields !== 'email' && profile?.phone_number && { phone: profile.phone_number }),
+          ...(fields !== 'phone' && profile?.email && { email: profile.email }),
+          community: profile?.community || null,
+          status: profile?.o_r_status || null,
           activated: member.activated,
           birthdate: member.birthdate.toISOString().split('T')[0],
+          hasProfile: !!profile,
         };
       });
 
