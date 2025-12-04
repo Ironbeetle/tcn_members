@@ -8,9 +8,6 @@ import Register from "@/components/Register"
 
 export default function TCN_Enter() {
   const menuItems = [
-    { label: "About Tataskweyak", to: "/pages/AboutTCN", color: "stone" as const },
-    { label: "About Who We Are", to: "/pages/WorldViewHome", color: "stone" as const },
-    { label: "Photo Gallery", to: "/pages/PhotoGallery", color: "stone" as const },
     { label: "Home", to: "/", color: "stone" as const },
   ]
 
@@ -43,7 +40,7 @@ export default function TCN_Enter() {
         <div className="w-full h-[10vh] lg:h-[10vh]"/>
         <section className="w-full relative min-h-screen overflow-scroll">
             <div className="grid grid-cols-1 lg:grid-cols-2 w-full gap-8 p-4 lg:p-8">
-                <div className="flex flex-col justify-center items-center">
+                {/* <div className="flex flex-col justify-center items-center">
                     <div className="techtxtmbb mb-4 lg:mb-1">
                         TCN Member Account Login & Activation
                     </div>
@@ -58,7 +55,7 @@ export default function TCN_Enter() {
                           style={{ objectFit: 'cover', height: 'auto' }}
                         />
                     </div>
-                </div>
+                </div> */}
                 <div className="flex flex-col justify-center items-center p-4">
                     <div className="w-full max-w-md">
                         <Tabs defaultValue="login" className="w-full">
@@ -73,6 +70,22 @@ export default function TCN_Enter() {
                                 <Register />
                             </TabsContent>
                         </Tabs>
+                    </div>
+                </div>
+                <div className="flex flex-col justify-center items-center">
+                    <div className="techtxtmbb mb-4 lg:mb-1">
+                        TCN Member Account Login & Activation
+                    </div>
+                    <div className="flex flex-col justify-start items-center p-1">
+                        <motion.img
+                          initial={{ opacity: 0 }}
+                          whileInView={{ opacity: 1 }}
+                          transition={{ duration: 0.5 , delay: 0.3 ,ease: "easeInOut"}}
+                          src="/tcnfemalecouch.png"
+                          alt="Tataskweyak Cree Nation Logo"
+                          className="w-full self-center"
+                          style={{ objectFit: 'cover', height: 'auto' }}
+                        />
                     </div>
                 </div>
             </div>
