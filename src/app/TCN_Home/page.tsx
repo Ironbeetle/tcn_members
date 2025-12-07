@@ -1,8 +1,8 @@
 'use client'
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { UserSessionBar } from '@/components/UserSessionBar';
 import { Hamburger } from '@/components/Hamburger';
 import { motion } from 'framer-motion';
@@ -54,33 +54,24 @@ const CHART_COLORS = ['#059669', '#f59e0b', '#9ca3af']; // green for activated, 
 export default function TCNHomePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [memberStats, setMemberStats] = useState<{
-    totalMembers: number;
-    activatedMembers: number;
-    pendingMembers: number;
-    noneMembers: number;
-  } | null>(null);
-  const [loadingStats, setLoadingStats] = useState(true);
 
-  // Fetch membership stats
-  useEffect(() => {
-    async function fetchStats() {
-      try {
-        const result = await getMembershipStats();
-        if (result.success && result.data) {
-          setMemberStats(result.data);
-        }
-      } catch (error) {
-        console.error('Error fetching membership stats:', error);
-      } finally {
-        setLoadingStats(false);
+  // TanStack Query for fetching membership stats
+  const {
+    data: memberStats,
+    isLoading: loadingStats,
+  } = useQuery({
+    queryKey: ['membershipStats'],
+    queryFn: async () => {
+      const result = await getMembershipStats();
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to fetch stats');
       }
-    }
-
-    if (status === 'authenticated') {
-      fetchStats();
-    }
-  }, [status]);
+      return result.data;
+    },
+    enabled: status === 'authenticated',
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
 
   // Prepare pie chart data
   const pieChartData = memberStats ? [

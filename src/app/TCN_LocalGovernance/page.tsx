@@ -1,8 +1,9 @@
 "use client"
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { UserSessionBar } from '@/components/UserSessionBar';
 import { useRouter } from "next/navigation";
 import { useSession } from 'next-auth/react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { queryBulletins } from '@/lib/actions';
 import { 
@@ -275,46 +276,37 @@ export default function TCNLocalGovernancePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState<'council' | 'bylaws' | 'news'>('council');
-  const [bulletins, setBulletins] = useState<Bulletin[]>([]);
-  const [loadingBulletins, setLoadingBulletins] = useState(true);
   const [selectedBulletin, setSelectedBulletin] = useState<Bulletin | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Fetch Chief & Council bulletins
-  useEffect(() => {
-    let isMounted = true;
-
-    async function fetchBulletins() {
-      try {
-        setLoadingBulletins(true);
-        const result = await queryBulletins({
-          category: 'CHIEFNCOUNCIL',
-          page: 1,
-          limit: 20,
-          sortBy: 'created',
-          sortOrder: 'desc'
-        });
-        
-        if (isMounted && result.success && result.data) {
-          setBulletins(result.data.bulletins);
-        }
-      } catch (err) {
-        console.error('Error fetching bulletins:', err);
-      } finally {
-        if (isMounted) {
-          setLoadingBulletins(false);
-        }
+  // TanStack Query for fetching Chief & Council bulletins
+  const {
+    data: bulletinsData,
+    isLoading: loadingBulletins,
+  } = useQuery({
+    queryKey: ['bulletins', 'CHIEFNCOUNCIL'],
+    queryFn: async () => {
+      const result = await queryBulletins({
+        category: 'CHIEFNCOUNCIL',
+        page: 1,
+        limit: 20,
+        sortBy: 'created',
+        sortOrder: 'desc'
+      });
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load bulletins');
       }
-    }
+      
+      return result.data;
+    },
+    enabled: status === 'authenticated',
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
 
-    if (status === 'authenticated') {
-      fetchBulletins();
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [status]);
+  // Extract bulletins from query data
+  const bulletins: Bulletin[] = bulletinsData?.bulletins || [];
 
   // Modal handlers
   const openBulletinModal = useCallback((bulletin: Bulletin) => {

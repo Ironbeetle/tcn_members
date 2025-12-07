@@ -1,8 +1,9 @@
 'use client'
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { UserSessionBar } from '@/components/UserSessionBar';
 import { motion } from 'framer-motion';
 import { queryBulletins } from '@/lib/actions';
@@ -19,7 +20,8 @@ import {
   ArrowLeft,
   X,
   ImageIcon,
-  FileText
+  FileText,
+  RefreshCw
 } from 'lucide-react';
 
 // Categories from schema enum
@@ -86,13 +88,40 @@ type Bulletin = {
 
 export default function page() {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
-  const [bulletins, setBulletins] = useState<Bulletin[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedBulletin, setSelectedBulletin] = useState<Bulletin | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { data: session, status } = useSession();
   const router = useRouter();
+
+  // TanStack Query for fetching bulletins
+  const { 
+    data: bulletinsData, 
+    isLoading, 
+    error, 
+    refetch,
+    isFetching 
+  } = useQuery({
+    queryKey: ['bulletins', selectedCategory],
+    queryFn: async () => {
+      const params = selectedCategory === 'ALL' 
+        ? { page: 1, limit: 100, sortBy: 'created' as const, sortOrder: 'desc' as const }
+        : { page: 1, category: selectedCategory as any, limit: 100, sortBy: 'created' as const, sortOrder: 'desc' as const };
+      
+      const result = await queryBulletins(params);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load bulletins');
+      }
+      
+      return result.data;
+    },
+    enabled: status === 'authenticated',
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  // Extract bulletins from query data
+  const bulletins: Bulletin[] = bulletinsData?.bulletins || [];
 
   // Open modal with selected bulletin
   const openBulletinModal = useCallback((bulletin: Bulletin) => {
@@ -105,48 +134,6 @@ export default function page() {
     setIsModalOpen(false);
     setSelectedBulletin(null);
   }, []);
-
-  // Fetch bulletins from database
-  useEffect(() => {
-    let isMounted = true;
-
-    async function fetchBulletins() {
-      try {
-        setLoading(true);
-        const params = selectedCategory === 'ALL' 
-          ? { page: 1, limit: 100, sortBy: 'created' as const, sortOrder: 'desc' as const }
-          : { page: 1, category: selectedCategory as any, limit: 100, sortBy: 'created' as const, sortOrder: 'desc' as const };
-        
-        const result = await queryBulletins(params);
-        
-        if (isMounted) {
-          if (result.success && result.data) {
-            setBulletins(result.data.bulletins);
-            setError(null);
-          } else {
-            setError(result.error || 'Failed to load bulletins');
-          }
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError('An error occurred while loading bulletins');
-          console.error(err);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    if (status === 'authenticated') {
-      fetchBulletins();
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedCategory, status]);
 
   // Memoized posts - must be before any early returns to follow Rules of Hooks
   const pinnedPosts = useMemo(() => bulletins.slice(0, 2), [bulletins]);
@@ -382,14 +369,14 @@ export default function page() {
                 </div>
               )}
 
-              {!loading && bulletins.length === 0 && (
+              {!isLoading && bulletins.length === 0 && (
                 <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-12 text-center">
                   <Megaphone className="w-12 h-12 text-stone-300 mx-auto mb-4" />
                   <p className="text-stone-600">No posts in this category yet.</p>
                 </div>
               )}
 
-              {loading && (
+              {isLoading && (
                 <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-12 text-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
                   <p className="text-stone-600">Loading posts...</p>
@@ -398,7 +385,7 @@ export default function page() {
 
               {error && (
                 <div className="bg-red-50 rounded-xl border border-red-200 p-4 text-center">
-                  <p className="text-red-600">{error}</p>
+                  <p className="text-red-600">{error instanceof Error ? error.message : 'An error occurred'}</p>
                 </div>
               )}
             </main>

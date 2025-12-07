@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
+import { useMutation } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -31,13 +32,81 @@ type FamilyFormData = {
 export default function AccountActivatePage() {
   const { data: session, status, update } = useSession()
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
   const [step, setStep] = useState<"profile" | "family">("profile")
 
   const { register: registerProfile, handleSubmit: handleSubmitProfile, formState: { errors: profileErrors } } = useForm<ProfileFormData>()
   const { register: registerFamily, handleSubmit: handleSubmitFamily, formState: { errors: familyErrors } } = useForm<FamilyFormData>({
     defaultValues: { dependents: 0 }
   })
+
+  // Mutation for completing activation
+  const activationMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await fetch("/api/complete-activation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      })
+      if (!response.ok) {
+        throw new Error("Failed to complete activation")
+      }
+      return response.json()
+    },
+    onSuccess: async () => {
+      toast.success("Account activation complete!")
+      await update()
+      setTimeout(() => router.push("/TCN_Home"), 1000)
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to complete activation")
+    }
+  })
+
+  // Profile mutation
+  const profileMutation = useMutation({
+    mutationFn: async (data: ProfileFormData) => {
+      const result = await createProfile({
+        ...data,
+        fnmemberId: session?.user?.id || "",
+      })
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create profile")
+      }
+      return result
+    },
+    onSuccess: () => {
+      toast.success("Profile created successfully!")
+      setStep("family")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "An error occurred while creating profile")
+    }
+  })
+
+  // Family mutation
+  const familyMutation = useMutation({
+    mutationFn: async (data: FamilyFormData) => {
+      const result = await createFamily({
+        ...data,
+        fnmemberId: session?.user?.id || "",
+      })
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create family record")
+      }
+      return result
+    },
+    onSuccess: () => {
+      // Complete activation after family is created
+      if (session?.user?.id) {
+        activationMutation.mutate(session.user.id)
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "An error occurred while creating family record")
+    }
+  })
+
+  const isLoading = profileMutation.isPending || familyMutation.isPending || activationMutation.isPending
 
   const menuItems = [
     { label: "Home", to: "/", color: "stone" as const },
@@ -56,81 +125,17 @@ export default function AccountActivatePage() {
     return null
   }
 
-  const onSubmitProfile = async (data: ProfileFormData) => {
-    setIsLoading(true)
-    try {
-      const result = await createProfile({
-        ...data,
-        fnmemberId: session?.user?.id || "",
-      })
-
-      if (result.success) {
-        toast.success("Profile created successfully!")
-        setStep("family")
-      } else {
-        toast.error(result.error || "Failed to create profile")
-      }
-    } catch (error) {
-      toast.error("An error occurred while creating profile")
-    } finally {
-      setIsLoading(false)
-    }
+  const onSubmitProfile = (data: ProfileFormData) => {
+    profileMutation.mutate(data)
   }
 
-  const onSubmitFamily = async (data: FamilyFormData) => {
-    setIsLoading(true)
-    try {
-      const result = await createFamily({
-        ...data,
-        fnmemberId: session?.user?.id || "",
-      })
-
-      if (result.success) {
-        toast.success("Account activation complete!")
-        
-        // Update member activation status to ACTIVATED
-        const response = await fetch("/api/complete-activation", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: session?.user?.id }),
-        })
-
-        if (response.ok) {
-          // Refresh session and redirect to home
-          await update()
-          setTimeout(() => router.push("/TCN_Home"), 1000)
-        }
-      } else {
-        toast.error(result.error || "Failed to create family record")
-      }
-    } catch (error) {
-      toast.error("An error occurred while creating family record")
-    } finally {
-      setIsLoading(false)
-    }
+  const onSubmitFamily = (data: FamilyFormData) => {
+    familyMutation.mutate(data)
   }
 
-  const skipFamily = async () => {
-    setIsLoading(true)
-    try {
-      // Update member activation status to ACTIVATED
-      const response = await fetch("/api/complete-activation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: session?.user?.id }),
-      })
-
-      if (response.ok) {
-        toast.success("Account activation complete!")
-        await update()
-        setTimeout(() => router.push("/TCN_Home"), 1000)
-      } else {
-        toast.error("Failed to complete activation")
-      }
-    } catch (error) {
-      toast.error("An error occurred")
-    } finally {
-      setIsLoading(false)
+  const skipFamily = () => {
+    if (session?.user?.id) {
+      activationMutation.mutate(session.user.id)
     }
   }
 

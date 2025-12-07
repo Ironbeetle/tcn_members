@@ -1,196 +1,192 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { UserSessionBar } from '@/components/UserSessionBar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { 
-  queryFillableForms, 
-  createFormSubmission,
-  submitFormAndGeneratePDF,
-  getMemberFormSubmissions
+  getActiveSignupForm,
+  checkUserSubmission,
+  submitSignupForm,
+  getUserSignupSubmissions,
 } from '@/lib/actions';
 import { 
   FileText,
-  Filter,
   ArrowLeft,
   X,
-  Download,
   Send,
   Clock,
   CheckCircle,
   AlertCircle,
-  FileCheck,
   Loader2,
   Home,
-  ClipboardList
+  Calendar,
+  Users,
+  Info,
+  ClipboardCheck
 } from 'lucide-react';
-import type { FormField } from '@/lib/validation';
 
-// Form categories
-const categories = [
-  { value: 'ALL', label: 'All Forms', color: 'amber' },
-  { value: 'GENERAL', label: 'General', color: 'blue' },
-  { value: 'HEALTH', label: 'Health', color: 'green' },
-  { value: 'EDUCATION', label: 'Education', color: 'purple' },
-  { value: 'HOUSING', label: 'Housing', color: 'orange' },
-  { value: 'EMPLOYMENT', label: 'Employment', color: 'teal' },
-  { value: 'RECREATION', label: 'Recreation', color: 'pink' },
-  { value: 'SOCIAL_SERVICES', label: 'Social Services', color: 'red' },
-];
-
-// Status badge colors
-const statusColors: Record<string, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-800',
-  SUBMITTED: 'bg-blue-100 text-blue-800',
-  UNDER_REVIEW: 'bg-purple-100 text-purple-800',
-  APPROVED: 'bg-green-100 text-green-800',
-  REJECTED: 'bg-red-100 text-red-800',
+// Field type definitions
+type SignupFormField = {
+  fieldId: string;
+  label: string;
+  fieldType: 'TEXT' | 'TEXTAREA' | 'EMAIL' | 'PHONE' | 'NUMBER' | 'DATE' | 'SELECT' | 'MULTISELECT' | 'CHECKBOX';
+  required: boolean;
+  order: number;
+  placeholder?: string;
+  options?: string[];
 };
 
-type FillableForm = {
+type SignupForm = {
   id: string;
+  tcn_form_id: string;
   title: string;
   description: string | null;
-  category: string;
-  pdf_url: string;
-  form_fields: FormField[];
+  deadline: Date | null;
+  max_entries: number | null;
   is_active: boolean;
+  category: string;
+  created_by: string | null;
+  fields: SignupFormField[];
   created: Date;
+  updated: Date;
+  submissionCount?: number;
 };
 
-type FormSubmission = {
-  id: string;
-  created: Date;
-  status: string;
-  filled_pdf_url: string | null;
-  form: {
-    id: string;
-    title: string;
-    category: string;
-  };
+// Category colors for display
+const categoryColors: Record<string, string> = {
+  GENERAL: 'bg-blue-100 text-blue-800',
+  HEALTH: 'bg-green-100 text-green-800',
+  EDUCATION: 'bg-purple-100 text-purple-800',
+  HOUSING: 'bg-orange-100 text-orange-800',
+  EMPLOYMENT: 'bg-teal-100 text-teal-800',
+  RECREATION: 'bg-pink-100 text-pink-800',
+  SOCIAL_SERVICES: 'bg-red-100 text-red-800',
+  CHIEFNCOUNCIL: 'bg-amber-100 text-amber-800',
+  PROGRAM_EVENTS: 'bg-indigo-100 text-indigo-800',
+  ANNOUNCEMENTS: 'bg-yellow-100 text-yellow-800',
 };
 
 export default function TCNFormsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  
-  const [selectedCategory, setSelectedCategory] = useState('ALL');
-  const [forms, setForms] = useState<FillableForm[]>([]);
-  const [mySubmissions, setMySubmissions] = useState<FormSubmission[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   
   // Modal state
-  const [selectedForm, setSelectedForm] = useState<FillableForm | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'forms' | 'submissions'>('forms');
 
   // Form handling
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
-  // Fetch forms
-  useEffect(() => {
-    let isMounted = true;
-
-    async function fetchData() {
-      if (!session?.user?.id) return;
-
-      try {
-        setLoading(true);
-        const params = selectedCategory === 'ALL' 
-          ? { is_active: true, page: 1, limit: 100, sortBy: 'created' as const, sortOrder: 'desc' as const }
-          : { is_active: true, category: selectedCategory as any, page: 1, limit: 100, sortBy: 'created' as const, sortOrder: 'desc' as const };
-        
-        const [formsResult, submissionsResult] = await Promise.all([
-          queryFillableForms(params),
-          getMemberFormSubmissions(session.user.id)
-        ]);
-        
-        if (isMounted) {
-          if (formsResult.success && formsResult.data) {
-            setForms(formsResult.data.forms);
-          }
-          if (submissionsResult.success && submissionsResult.data) {
-            setMySubmissions(submissionsResult.data);
-          }
-          setError(null);
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError('An error occurred while loading forms');
-          console.error(err);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+  // TanStack Query for fetching active signup form
+  const {
+    data: formData,
+    isLoading: loadingForm,
+    error: formError,
+  } = useQuery({
+    queryKey: ['activeSignupForm'],
+    queryFn: async () => {
+      const result = await getActiveSignupForm();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load form');
       }
-    }
+      
+      return result.data;
+    },
+    enabled: status === 'authenticated',
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
 
-    if (status === 'authenticated') {
-      fetchData();
-    }
+  // Check if user has already submitted
+  const {
+    data: submissionStatus,
+    isLoading: loadingSubmissionStatus,
+  } = useQuery({
+    queryKey: ['signupSubmissionStatus', formData?.tcn_form_id, session?.user?.id],
+    queryFn: async () => {
+      if (!formData?.tcn_form_id || !session?.user?.id) return null;
+      
+      const result = await checkUserSubmission(formData.tcn_form_id, session.user.id);
+      
+      if (!result.success) {
+        return { hasSubmitted: false };
+      }
+      
+      return result.data;
+    },
+    enabled: status === 'authenticated' && !!formData?.tcn_form_id && !!session?.user?.id,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
 
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedCategory, status, session?.user?.id]);
+  // Get user's past submissions
+  const {
+    data: userSubmissions,
+  } = useQuery({
+    queryKey: ['userSignupSubmissions', session?.user?.id],
+    queryFn: async () => {
+      if (!session?.user?.id) return [];
+      
+      const result = await getUserSignupSubmissions(session.user.id);
+      
+      if (!result.success) {
+        return [];
+      }
+      
+      return result.data || [];
+    },
+    enabled: status === 'authenticated' && !!session?.user?.id,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const activeForm = formData as SignupForm | null;
+  const hasSubmitted = submissionStatus?.hasSubmitted || false;
 
   // Open form modal
-  const openFormModal = useCallback((form: FillableForm) => {
-    setSelectedForm(form);
+  const openFormModal = useCallback(() => {
+    if (hasSubmitted) {
+      toast.info('You have already submitted this form');
+      return;
+    }
     reset(); // Reset form values
     setIsModalOpen(true);
-  }, [reset]);
+  }, [reset, hasSubmitted]);
 
   // Close modal
   const closeModal = useCallback(() => {
     setIsModalOpen(false);
-    setSelectedForm(null);
     reset();
   }, [reset]);
 
   // Submit form mutation
   const submitMutation = useMutation({
     mutationFn: async (formData: Record<string, any>) => {
-      if (!session?.user?.id || !selectedForm) throw new Error('Missing data');
+      if (!session?.user?.id || !activeForm) throw new Error('Missing data');
       
-      // Create the submission
-      const submissionResult = await createFormSubmission({
-        formId: selectedForm.id,
-        fnmemberId: session.user.id,
-        form_data: formData,
-      });
+      const result = await submitSignupForm(
+        activeForm.tcn_form_id,
+        session.user.id,
+        formData
+      );
 
-      if (!submissionResult.success) {
-        throw new Error(submissionResult.error || 'Failed to save form');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to submit form');
       }
 
-      // Generate the filled PDF
-      const pdfResult = await submitFormAndGeneratePDF(submissionResult.data.id);
-      
-      if (!pdfResult.success) {
-        throw new Error(pdfResult.error || 'Failed to generate PDF');
-      }
-
-      return pdfResult.data;
+      return result.data;
     },
     onSuccess: () => {
-      toast.success('Form submitted successfully!');
+      toast.success('Registration submitted successfully!');
       closeModal();
-      // Refresh submissions
-      if (session?.user?.id) {
-        getMemberFormSubmissions(session.user.id).then(result => {
-          if (result.success && result.data) {
-            setMySubmissions(result.data);
-          }
-        });
-      }
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['signupSubmissionStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['userSignupSubmissions'] });
+      queryClient.invalidateQueries({ queryKey: ['activeSignupForm'] });
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to submit form');
@@ -203,124 +199,136 @@ export default function TCNFormsPage() {
   }, [submitMutation]);
 
   // Render form field based on type
-  const renderFormField = (field: FormField) => {
-    const fieldError = errors[field.name];
+  const renderFormField = (field: SignupFormField) => {
+    const fieldError = errors[field.fieldId];
     const baseInputClass = "w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent";
     const errorClass = fieldError ? "border-red-500" : "border-stone-300";
 
-    switch (field.type) {
-      case 'textarea':
+    switch (field.fieldType) {
+      case 'TEXTAREA':
         return (
           <textarea
-            {...register(field.name, { required: field.required })}
+            {...register(field.fieldId, { required: field.required })}
             placeholder={field.placeholder}
             rows={4}
             className={`${baseInputClass} ${errorClass}`}
           />
         );
       
-      case 'select':
+      case 'SELECT':
         return (
           <select
-            {...register(field.name, { required: field.required })}
+            {...register(field.fieldId, { required: field.required })}
             className={`${baseInputClass} ${errorClass}`}
           >
             <option value="">Select an option...</option>
             {field.options?.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        );
+
+      case 'MULTISELECT':
+        return (
+          <select
+            {...register(field.fieldId, { required: field.required })}
+            multiple
+            className={`${baseInputClass} ${errorClass} min-h-[100px]`}
+          >
+            {field.options?.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
         );
       
-      case 'checkbox':
+      case 'CHECKBOX':
         return (
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
-              {...register(field.name, { required: field.required })}
+              {...register(field.fieldId, { required: field.required })}
               className="w-4 h-4 text-amber-600 border-stone-300 rounded focus:ring-amber-500"
             />
-            <span className="text-sm text-stone-600">{field.placeholder}</span>
+            <span className="text-sm text-stone-600">{field.placeholder || 'Yes'}</span>
           </div>
         );
       
-      case 'radio':
-        return (
-          <div className="space-y-2">
-            {field.options?.map((opt) => (
-              <label key={opt.value} className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  {...register(field.name, { required: field.required })}
-                  value={opt.value}
-                  className="w-4 h-4 text-amber-600 border-stone-300 focus:ring-amber-500"
-                />
-                <span className="text-sm text-stone-700">{opt.label}</span>
-              </label>
-            ))}
-          </div>
-        );
-      
-      case 'date':
+      case 'DATE':
         return (
           <input
             type="date"
-            {...register(field.name, { required: field.required })}
+            {...register(field.fieldId, { required: field.required })}
             className={`${baseInputClass} ${errorClass}`}
           />
         );
       
-      case 'number':
+      case 'NUMBER':
         return (
           <input
             type="number"
-            {...register(field.name, { 
-              required: field.required,
-              min: field.validation?.min,
-              max: field.validation?.max,
-            })}
+            {...register(field.fieldId, { required: field.required })}
             placeholder={field.placeholder}
             className={`${baseInputClass} ${errorClass}`}
           />
         );
       
-      case 'email':
+      case 'EMAIL':
         return (
           <input
             type="email"
-            {...register(field.name, { 
+            {...register(field.fieldId, { 
               required: field.required,
               pattern: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i
             })}
-            placeholder={field.placeholder}
+            placeholder={field.placeholder || 'email@example.com'}
             className={`${baseInputClass} ${errorClass}`}
           />
         );
       
-      case 'phone':
+      case 'PHONE':
         return (
           <input
             type="tel"
-            {...register(field.name, { required: field.required })}
+            {...register(field.fieldId, { required: field.required })}
             placeholder={field.placeholder || '(000) 000-0000'}
             className={`${baseInputClass} ${errorClass}`}
           />
         );
       
-      default: // text
+      default: // TEXT
         return (
           <input
             type="text"
-            {...register(field.name, { 
-              required: field.required,
-              minLength: field.validation?.minLength,
-              maxLength: field.validation?.maxLength,
-            })}
+            {...register(field.fieldId, { required: field.required })}
             placeholder={field.placeholder}
             className={`${baseInputClass} ${errorClass}`}
           />
         );
     }
+  };
+
+  // Format deadline for display
+  const formatDeadline = (deadline: Date | null) => {
+    if (!deadline) return null;
+    const d = new Date(deadline);
+    return d.toLocaleDateString('en-US', { 
+      weekday: 'long',
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
+
+  // Calculate days remaining
+  const getDaysRemaining = (deadline: Date | null) => {
+    if (!deadline) return null;
+    const d = new Date(deadline);
+    const now = new Date();
+    const diff = d.getTime() - now.getTime();
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    return days;
   };
 
   if (status === "loading") {
@@ -336,11 +344,13 @@ export default function TCNFormsPage() {
     return null;
   }
 
+  const daysRemaining = activeForm?.deadline ? getDaysRemaining(activeForm.deadline) : null;
+
   return (
     <div className="w-full min-h-screen bg-stone-100">
       {/* Form Fill Modal */}
       <AnimatePresence>
-        {isModalOpen && selectedForm && (
+        {isModalOpen && activeForm && (
           <div 
             className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
             onClick={closeModal}
@@ -358,10 +368,10 @@ export default function TCNFormsPage() {
                 <div className="flex items-center gap-3">
                   <FileText className="w-6 h-6 text-white" />
                   <div>
-                    <h2 className="text-lg font-bold text-white">{selectedForm.title}</h2>
-                    <span className="text-xs text-amber-200">
-                      {categories.find(c => c.value === selectedForm.category)?.label}
-                    </span>
+                    <h2 className="text-lg font-bold text-white">{activeForm.title}</h2>
+                    {activeForm.created_by && (
+                      <span className="text-xs text-amber-200">by {activeForm.created_by}</span>
+                    )}
                   </div>
                 </div>
                 <button
@@ -374,19 +384,21 @@ export default function TCNFormsPage() {
 
               {/* Modal Content */}
               <div className="overflow-y-auto max-h-[calc(90vh-140px)] p-6">
-                {selectedForm.description && (
-                  <p className="text-stone-600 mb-6">{selectedForm.description}</p>
+                {activeForm.description && (
+                  <p className="text-stone-600 mb-6">{activeForm.description}</p>
                 )}
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                  {selectedForm.form_fields.map((field) => (
-                    <div key={field.id} className="space-y-1">
+                  {activeForm.fields
+                    .sort((a, b) => a.order - b.order)
+                    .map((field) => (
+                    <div key={field.fieldId} className="space-y-1">
                       <label className="block text-sm font-medium text-stone-700">
                         {field.label}
                         {field.required && <span className="text-red-500 ml-1">*</span>}
                       </label>
                       {renderFormField(field)}
-                      {errors[field.name] && (
+                      {errors[field.fieldId] && (
                         <p className="text-xs text-red-600">This field is required</p>
                       )}
                     </div>
@@ -414,7 +426,7 @@ export default function TCNFormsPage() {
                       ) : (
                         <>
                           <Send className="w-4 h-4" />
-                          Submit Form
+                          Submit Registration
                         </>
                       )}
                     </button>
@@ -433,7 +445,7 @@ export default function TCNFormsPage() {
       
       <div className="pt-16 lg:pt-16">
         {/* Back Button */}
-        <div className="max-w-[80vw] mx-auto px-4 pt-4">
+        <div className="max-w-4xl mx-auto px-4 pt-4">
           <button
             onClick={() => router.back()}
             className="flex items-center gap-2 text-stone-600 hover:text-amber-700 transition-colors mb-2"
@@ -443,237 +455,261 @@ export default function TCNFormsPage() {
           </button>
         </div>
 
-        {/* 3-Column Layout */}
-        <div className="max-w-[80vw] mx-auto px-4 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
-            {/* LEFT SIDEBAR - Category Filter */}
-            <aside className="lg:col-span-3 space-y-4">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5 }}
-                className="bg-white rounded-2xl shadow-sm border border-stone-200 p-4 sticky top-24"
-              >
-                <div className="flex items-center gap-2 mb-4">
-                  <Filter className="w-5 h-5 text-amber-700" />
-                  <h3 className="font-bold text-stone-800">Categories</h3>
-                </div>
-                <div className="space-y-1">
-                  {categories.map((cat) => (
-                    <button
-                      key={cat.value}
-                      onClick={() => setSelectedCategory(cat.value)}
-                      className={`w-full p-3 rounded-lg transition-all text-left ${
-                        selectedCategory === cat.value
-                          ? 'bg-amber-100 border border-amber-300'
-                          : 'hover:bg-stone-50 border border-transparent'
-                      }`}
-                    >
-                      <span className={`text-sm font-medium ${
-                        selectedCategory === cat.value ? 'text-amber-900' : 'text-stone-700'
-                      }`}>
-                        {cat.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            </aside>
+        {/* Main Content */}
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          {/* Page Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="bg-gradient-to-r from-amber-700 to-amber-900 rounded-2xl shadow-lg p-6 text-white mb-6"
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <ClipboardCheck className="w-8 h-8" />
+              <h1 className="text-2xl font-bold">Community Sign-Up</h1>
+            </div>
+            <p className="text-amber-50">
+              Register for community programs, events, and services. Sign-up forms are posted here 
+              as they become available and each has its own deadline.
+            </p>
+          </motion.div>
 
-            {/* MAIN CONTENT */}
-            <main className="lg:col-span-6 space-y-4">
-              {/* Page Header */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="bg-gradient-to-r from-amber-700 to-amber-900 rounded-2xl shadow-lg p-6 text-white"
-              >
-                <div className="flex items-center gap-4 mb-3">
-                  <FileText className="w-8 h-8" />
-                  <h1 className="text-2xl font-bold">Community Forms</h1>
-                </div>
-                <p className="text-amber-50">Fill out and submit forms online. Your completed forms will be saved and available for download.</p>
-              </motion.div>
-
-              {/* Tab Switcher */}
-              <div className="flex bg-white rounded-xl shadow-sm border border-stone-200 p-1">
-                <button
-                  onClick={() => setActiveTab('forms')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg transition-colors ${
-                    activeTab === 'forms' 
-                      ? 'bg-amber-100 text-amber-900' 
-                      : 'text-stone-600 hover:bg-stone-50'
-                  }`}
-                >
-                  <ClipboardList className="w-4 h-4" />
-                  Available Forms
-                </button>
-                <button
-                  onClick={() => setActiveTab('submissions')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg transition-colors ${
-                    activeTab === 'submissions' 
-                      ? 'bg-amber-100 text-amber-900' 
-                      : 'text-stone-600 hover:bg-stone-50'
-                  }`}
-                >
-                  <FileCheck className="w-4 h-4" />
-                  My Submissions ({mySubmissions.length})
-                </button>
+          {/* Info Box about how sign-ups work */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6"
+          >
+            <div className="flex gap-3">
+              <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-blue-900 mb-1">How Community Sign-Ups Work</h3>
+                <p className="text-sm text-blue-800">
+                  Sign-up forms are posted by community departments for specific programs, events, or services. 
+                  Each form has a deadline after which it will no longer accept registrations. Once you submit 
+                  a form, your registration is sent directly to the organizing department. Check back regularly 
+                  for new sign-up opportunities!
+                </p>
               </div>
+            </div>
+          </motion.div>
 
-              {/* Forms List */}
-              {activeTab === 'forms' && (
-                <div className="space-y-3">
-                  {loading ? (
-                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-12 text-center">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
-                      <p className="text-stone-600">Loading forms...</p>
-                    </div>
-                  ) : forms.length === 0 ? (
-                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-12 text-center">
-                      <FileText className="w-12 h-12 text-stone-300 mx-auto mb-4" />
-                      <p className="text-stone-600">No forms available in this category.</p>
-                    </div>
-                  ) : (
-                    forms.map((form, index) => (
-                      <motion.div
-                        key={form.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                        className="bg-white rounded-xl shadow-sm border border-stone-200 p-4 hover:shadow-md hover:border-amber-300 transition-all"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
-                                {categories.find(c => c.value === form.category)?.label}
-                              </span>
-                            </div>
-                            <h3 className="font-bold text-lg text-stone-800 mb-1">{form.title}</h3>
-                            {form.description && (
-                              <p className="text-sm text-stone-600 line-clamp-2">{form.description}</p>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => openFormModal(form)}
-                            className="flex items-center gap-2 px-4 py-2 bg-amber-700 text-white rounded-lg hover:bg-amber-800 transition-colors ml-4"
-                          >
-                            <FileText className="w-4 h-4" />
-                            Fill Out
-                          </button>
-                        </div>
-                      </motion.div>
-                    ))
-                  )}
-                </div>
-              )}
+          {/* Loading State */}
+          {loadingForm && (
+            <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-12 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+              <p className="text-stone-600">Loading current sign-up form...</p>
+            </div>
+          )}
 
-              {/* Submissions List */}
-              {activeTab === 'submissions' && (
-                <div className="space-y-3">
-                  {mySubmissions.length === 0 ? (
-                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-12 text-center">
-                      <FileCheck className="w-12 h-12 text-stone-300 mx-auto mb-4" />
-                      <p className="text-stone-600">You haven't submitted any forms yet.</p>
-                    </div>
-                  ) : (
-                    mySubmissions.map((submission, index) => (
-                      <motion.div
-                        key={submission.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                        className="bg-white rounded-xl shadow-sm border border-stone-200 p-4"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusColors[submission.status]}`}>
-                                {submission.status.replace('_', ' ')}
-                              </span>
-                              <span className="text-xs text-stone-500">
-                                {new Date(submission.created).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <h3 className="font-bold text-lg text-stone-800">{submission.form.title}</h3>
-                          </div>
-                          {submission.filled_pdf_url && (
-                            <a
-                              href={submission.filled_pdf_url}
-                              download
-                              className="flex items-center gap-2 px-4 py-2 bg-stone-100 text-stone-700 rounded-lg hover:bg-stone-200 transition-colors ml-4"
-                            >
-                              <Download className="w-4 h-4" />
-                              Download
-                            </a>
-                          )}
-                        </div>
-                      </motion.div>
-                    ))
-                  )}
-                </div>
-              )}
+          {/* No Active Form */}
+          {!loadingForm && !activeForm && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="bg-white rounded-xl shadow-sm border border-stone-200 p-12 text-center"
+            >
+              <Calendar className="w-16 h-16 text-stone-300 mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-stone-800 mb-2">No Active Sign-Up Forms</h2>
+              <p className="text-stone-600 max-w-md mx-auto">
+                There are currently no sign-up forms available. Check back later for upcoming 
+                community programs, events, and services that require registration.
+              </p>
+            </motion.div>
+          )}
 
-              {error && (
-                <div className="bg-red-50 rounded-xl border border-red-200 p-4 text-center">
-                  <p className="text-red-600">{error}</p>
-                </div>
-              )}
-            </main>
-
-            {/* RIGHT SIDEBAR */}
-            <aside className="lg:col-span-3 space-y-4">
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5 }}
-                className="bg-white rounded-2xl shadow-sm border border-stone-200 p-4 sticky top-24"
-              >
-                <h3 className="font-bold text-stone-800 mb-4">Quick Actions</h3>
-                <div className="space-y-2">
-                  <Link href="/TCN_BulletinBoard" className="block p-3 rounded-lg hover:bg-amber-50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <ClipboardList className="w-5 h-5 text-amber-700" />
-                      <span className="text-sm font-medium text-stone-700">Bulletin Board</span>
+          {/* Active Form Card */}
+          {!loadingForm && activeForm && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="bg-white rounded-2xl shadow-lg border border-stone-200 overflow-hidden"
+            >
+              {/* Form Header */}
+              <div className="p-6 border-b border-stone-100">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`px-3 py-1 text-xs font-semibold rounded-full ${categoryColors[activeForm.category] || 'bg-stone-100 text-stone-800'}`}>
+                        {activeForm.category.replace('_', ' ')}
+                      </span>
+                      {activeForm.created_by && (
+                        <span className="text-xs text-stone-500">
+                          by {activeForm.created_by}
+                        </span>
+                      )}
                     </div>
-                  </Link>
-                  <Link href="/TCN_Home" className="block p-3 rounded-lg hover:bg-stone-50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <Home className="w-5 h-5 text-amber-700" />
-                      <span className="text-sm font-medium text-stone-700">Back to Home</span>
-                    </div>
-                  </Link>
-                </div>
-
-                {/* Status Legend */}
-                <div className="mt-6 pt-4 border-t border-stone-200">
-                  <h4 className="text-sm font-semibold text-stone-700 mb-3">Submission Status</h4>
-                  <div className="space-y-2 text-xs">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-yellow-600" />
-                      <span>Pending - Draft saved</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Send className="w-4 h-4 text-blue-600" />
-                      <span>Submitted - Under review</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                      <span>Approved</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 text-red-600" />
-                      <span>Rejected</span>
-                    </div>
+                    <h2 className="text-2xl font-bold text-stone-900 mb-2">{activeForm.title}</h2>
+                    {activeForm.description && (
+                      <p className="text-stone-600">{activeForm.description}</p>
+                    )}
                   </div>
                 </div>
-              </motion.div>              
-            </aside>
 
-          </div>
+                {/* Form Meta Info */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+                  {/* Deadline */}
+                  {activeForm.deadline && (
+                    <div className="flex items-center gap-3 bg-stone-50 rounded-lg p-3">
+                      <Clock className={`w-5 h-5 ${daysRemaining && daysRemaining <= 3 ? 'text-red-600' : 'text-amber-600'}`} />
+                      <div>
+                        <p className="text-xs text-stone-500 uppercase tracking-wide">Deadline</p>
+                        <p className="text-sm font-semibold text-stone-800">
+                          {formatDeadline(activeForm.deadline)}
+                        </p>
+                        {daysRemaining !== null && (
+                          <p className={`text-xs ${daysRemaining <= 3 ? 'text-red-600 font-semibold' : 'text-stone-500'}`}>
+                            {daysRemaining <= 0 ? 'Deadline passed' : `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} remaining`}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Entries */}
+                  {activeForm.max_entries && (
+                    <div className="flex items-center gap-3 bg-stone-50 rounded-lg p-3">
+                      <Users className="w-5 h-5 text-amber-600" />
+                      <div>
+                        <p className="text-xs text-stone-500 uppercase tracking-wide">Spots</p>
+                        <p className="text-sm font-semibold text-stone-800">
+                          {activeForm.submissionCount || 0} / {activeForm.max_entries}
+                        </p>
+                        <p className="text-xs text-stone-500">
+                          {activeForm.max_entries - (activeForm.submissionCount || 0)} remaining
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Status */}
+                  <div className="flex items-center gap-3 bg-stone-50 rounded-lg p-3">
+                    {hasSubmitted ? (
+                      <>
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <div>
+                          <p className="text-xs text-stone-500 uppercase tracking-wide">Your Status</p>
+                          <p className="text-sm font-semibold text-green-700">Registered</p>
+                          <p className="text-xs text-stone-500">
+                            Submitted {submissionStatus?.submittedAt 
+                              ? new Date(submissionStatus.submittedAt).toLocaleDateString() 
+                              : ''}
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="w-5 h-5 text-amber-600" />
+                        <div>
+                          <p className="text-xs text-stone-500 uppercase tracking-wide">Your Status</p>
+                          <p className="text-sm font-semibold text-amber-700">Not Registered</p>
+                          <p className="text-xs text-stone-500">Click below to sign up</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div className="p-6 bg-stone-50">
+                {hasSubmitted ? (
+                  <div className="text-center">
+                    <div className="inline-flex items-center gap-2 px-6 py-3 bg-green-100 text-green-800 rounded-lg">
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="font-semibold">You're Already Registered!</span>
+                    </div>
+                    <p className="text-sm text-stone-500 mt-2">
+                      Your registration has been submitted to the organizing department.
+                    </p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={openFormModal}
+                    disabled={loadingSubmissionStatus}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-amber-700 text-white rounded-xl hover:bg-amber-800 transition-colors font-semibold text-lg disabled:opacity-50"
+                  >
+                    {loadingSubmissionStatus ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Checking status...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="w-5 h-5" />
+                        Sign Up Now
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Past Submissions Section */}
+          {userSubmissions && userSubmissions.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="mt-8"
+            >
+              <h3 className="text-lg font-bold text-stone-800 mb-4">Your Past Registrations</h3>
+              <div className="space-y-3">
+                {userSubmissions.map((submission: any) => (
+                  <div 
+                    key={submission.id}
+                    className="bg-white rounded-xl shadow-sm border border-stone-200 p-4 flex items-center justify-between"
+                  >
+                    <div>
+                      <h4 className="font-semibold text-stone-800">{submission.form.title}</h4>
+                      <p className="text-sm text-stone-500">
+                        Submitted {new Date(submission.created).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 text-green-600">
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="text-sm font-medium">Registered</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Quick Links */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="mt-8 bg-white rounded-xl shadow-sm border border-stone-200 p-4"
+          >
+            <h3 className="font-bold text-stone-800 mb-4">Quick Links</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <Link href="/TCN_BulletinBoard" className="p-3 rounded-lg hover:bg-amber-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 text-amber-700" />
+                  <span className="text-sm font-medium text-stone-700">Bulletin Board</span>
+                </div>
+              </Link>
+              <Link href="/TCN_Home" className="p-3 rounded-lg hover:bg-stone-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <Home className="w-5 h-5 text-amber-700" />
+                  <span className="text-sm font-medium text-stone-700">Back to Home</span>
+                </div>
+              </Link>
+            </div>
+          </motion.div>
+
+          {/* Error State */}
+          {formError && (
+            <div className="bg-red-50 rounded-xl border border-red-200 p-4 text-center mt-4">
+              <p className="text-red-600">{formError instanceof Error ? formError.message : 'An error occurred'}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -33,6 +33,7 @@ model fnmember {
   barcode        Barcode[]
   family         Family[]
   form_submissions form_submission[]
+  signup_submissions signup_submission[]
   
   @@schema("fnmemberlist")
 }
@@ -171,6 +172,9 @@ enum FormCategory {
   EMPLOYMENT
   RECREATION
   SOCIAL_SERVICES
+  CHIEFNCOUNCIL
+  PROGRAM_EVENTS
+  ANNOUNCEMENTS
   @@schema("tcnbulletin")
 }
 
@@ -180,5 +184,46 @@ enum SubmissionStatus {
   UNDER_REVIEW
   APPROVED
   REJECTED
+  @@schema("tcnbulletin")
+}
+
+// ==================== SIGNUP FORMS (Synced from TCN_COMM) ====================
+
+model signup_form {
+  id            String           @id @default(cuid())
+  created       DateTime         @default(now())
+  updated       DateTime         @default(now()) @updatedAt
+  tcn_form_id   String           @unique  // ID from TCN_COMM (the source)
+  title         String
+  description   String?
+  deadline      DateTime?
+  max_entries   Int?
+  is_active     Boolean          @default(true)
+  category      FormCategory     @default(GENERAL)
+  created_by    String?          // Department name from TCN_COMM
+  fields        Json             // JSON array of field definitions
+  submissions   signup_submission[]
+
+  @@index([is_active])
+  @@index([deadline])
+  @@schema("tcnbulletin")
+}
+
+model signup_submission {
+  id            String         @id @default(cuid())
+  created       DateTime       @default(now())
+  updated       DateTime       @default(now()) @updatedAt
+  responses     Json           // Submitted form field values
+  synced_to_tcn Boolean        @default(false)
+  sync_attempts Int            @default(0)
+  last_sync_error String?
+  
+  // Relations
+  formId        String
+  form          signup_form    @relation(fields: [formId], references: [id], onDelete: Cascade)
+  fnmemberId    String
+  fnmember      fnmember       @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
+
+  @@unique([formId, fnmemberId])  // One submission per member per form
   @@schema("tcnbulletin")
 }

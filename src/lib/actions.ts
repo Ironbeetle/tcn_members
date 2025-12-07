@@ -1386,3 +1386,287 @@ export async function getMembershipStats(): Promise<ActionResult<{
     return { success: false, error: handlePrismaError(error) };
   }
 }
+
+// ==================== SIGNUP FORM ACTIONS ====================
+
+// Types for signup forms
+type SignupFormField = {
+  fieldId: string;
+  label: string;
+  fieldType: 'TEXT' | 'TEXTAREA' | 'EMAIL' | 'PHONE' | 'NUMBER' | 'DATE' | 'SELECT' | 'MULTISELECT' | 'CHECKBOX';
+  required: boolean;
+  order: number;
+  placeholder?: string;
+  options?: string[];
+};
+
+type SignupForm = {
+  id: string;
+  tcn_form_id: string;
+  title: string;
+  description: string | null;
+  deadline: Date | null;
+  max_entries: number | null;
+  is_active: boolean;
+  category: string;
+  created_by: string | null;
+  fields: SignupFormField[];
+  created: Date;
+  updated: Date;
+  submissionCount?: number;
+  hasUserSubmitted?: boolean;
+};
+
+export async function getActiveSignupForm(): Promise<ActionResult<SignupForm | null>> {
+  try {
+    const form = await prisma.signup_form.findFirst({
+      where: {
+        is_active: true,
+        OR: [
+          { deadline: null },
+          { deadline: { gte: new Date() } }
+        ]
+      },
+      include: {
+        _count: {
+          select: { submissions: true }
+        }
+      },
+      orderBy: { created: 'desc' },
+    });
+
+    if (!form) {
+      return { success: true, data: null };
+    }
+
+    return {
+      success: true,
+      data: {
+        ...form,
+        fields: form.fields as SignupFormField[],
+        submissionCount: form._count.submissions,
+      },
+    };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+export async function getSignupFormById(tcnFormId: string): Promise<ActionResult<SignupForm | null>> {
+  try {
+    const form = await prisma.signup_form.findUnique({
+      where: { tcn_form_id: tcnFormId },
+      include: {
+        _count: {
+          select: { submissions: true }
+        }
+      },
+    });
+
+    if (!form) {
+      return { success: true, data: null };
+    }
+
+    return {
+      success: true,
+      data: {
+        ...form,
+        fields: form.fields as SignupFormField[],
+        submissionCount: form._count.submissions,
+      },
+    };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+export async function checkUserSubmission(tcnFormId: string, memberId: string): Promise<ActionResult<{ hasSubmitted: boolean; submittedAt?: Date }>> {
+  try {
+    const form = await prisma.signup_form.findUnique({
+      where: { tcn_form_id: tcnFormId },
+    });
+
+    if (!form) {
+      return { success: false, error: 'Form not found' };
+    }
+
+    const submission = await prisma.signup_submission.findUnique({
+      where: {
+        formId_fnmemberId: {
+          formId: form.id,
+          fnmemberId: memberId,
+        }
+      }
+    });
+
+    return {
+      success: true,
+      data: {
+        hasSubmitted: !!submission,
+        submittedAt: submission?.created,
+      },
+    };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+export async function submitSignupForm(
+  tcnFormId: string,
+  memberId: string,
+  responses: Record<string, any>
+): Promise<ActionResult<{ submissionId: string; webhookSynced: boolean }>> {
+  try {
+    // Get the form
+    const form = await prisma.signup_form.findUnique({
+      where: { tcn_form_id: tcnFormId },
+      include: {
+        _count: {
+          select: { submissions: true }
+        }
+      }
+    });
+
+    if (!form) {
+      return { success: false, error: 'Form not found' };
+    }
+
+    // Validate form is still accepting submissions
+    if (!form.is_active) {
+      return { success: false, error: 'This form is no longer accepting submissions' };
+    }
+
+    if (form.deadline && new Date(form.deadline) < new Date()) {
+      return { success: false, error: 'The deadline for this form has passed' };
+    }
+
+    if (form.max_entries && form._count.submissions >= form.max_entries) {
+      return { success: false, error: 'This form has reached its maximum number of entries' };
+    }
+
+    // Check for existing submission
+    const existingSubmission = await prisma.signup_submission.findUnique({
+      where: {
+        formId_fnmemberId: {
+          formId: form.id,
+          fnmemberId: memberId,
+        }
+      }
+    });
+
+    if (existingSubmission) {
+      return { success: false, error: 'You have already submitted this form' };
+    }
+
+    // Get member info for webhook
+    const member = await prisma.fnmember.findUnique({
+      where: { id: memberId },
+      include: { profile: true }
+    });
+
+    if (!member) {
+      return { success: false, error: 'Member not found' };
+    }
+
+    // Create the submission
+    const submission = await prisma.signup_submission.create({
+      data: {
+        formId: form.id,
+        fnmemberId: memberId,
+        responses,
+      },
+    });
+
+    // Send webhook to TCN_COMM
+    let webhookSuccess = false;
+    const webhookUrl = process.env.TCN_COMM_WEBHOOK_URL;
+    const webhookApiKey = process.env.TCN_COMM_API_KEY;
+
+    if (webhookUrl && webhookApiKey) {
+      try {
+        const profile = member.profile?.[0];
+        
+        const webhookResponse = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': webhookApiKey,
+          },
+          body: JSON.stringify({
+            formId: form.tcn_form_id,
+            submittedAt: submission.created.toISOString(),
+            submitter: {
+              memberId: member.t_number,
+              name: `${member.first_name} ${member.last_name}`,
+              email: profile?.email || '',
+              phone: profile?.phone_number || '',
+            },
+            responses,
+          }),
+        });
+
+        if (webhookResponse.ok) {
+          webhookSuccess = true;
+          await prisma.signup_submission.update({
+            where: { id: submission.id },
+            data: { synced_to_tcn: true },
+          });
+        } else {
+          const errorData = await webhookResponse.json().catch(() => ({}));
+          await prisma.signup_submission.update({
+            where: { id: submission.id },
+            data: {
+              sync_attempts: 1,
+              last_sync_error: errorData.error || `HTTP ${webhookResponse.status}`,
+            },
+          });
+        }
+      } catch (err: any) {
+        await prisma.signup_submission.update({
+          where: { id: submission.id },
+          data: {
+            sync_attempts: 1,
+            last_sync_error: err.message,
+          },
+        });
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        submissionId: submission.id,
+        webhookSynced: webhookSuccess,
+      },
+    };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+export async function getUserSignupSubmissions(memberId: string): Promise<ActionResult<any[]>> {
+  try {
+    const submissions = await prisma.signup_submission.findMany({
+      where: { fnmemberId: memberId },
+      include: {
+        form: {
+          select: {
+            id: true,
+            tcn_form_id: true,
+            title: true,
+            category: true,
+            deadline: true,
+          }
+        }
+      },
+      orderBy: { created: 'desc' },
+    });
+
+    return {
+      success: true,
+      data: submissions,
+    };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}

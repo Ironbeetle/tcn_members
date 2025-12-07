@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { UserSessionBar } from '@/components/UserSessionBar';
@@ -8,8 +8,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { uploadProfileImage, deleteProfileImage } from '@/lib/actions';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { uploadProfileImage, deleteProfileImage, getFnmemberById } from '@/lib/actions';
 import { 
   User, 
   Mail, 
@@ -58,8 +58,6 @@ export default function MemberAccount() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [memberData, setMemberData] = useState<MemberData | null>(null);
-  const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
@@ -72,57 +70,50 @@ export default function MemberAccount() {
     resolver: zodResolver(contactUpdateSchema)
   });
 
-  useEffect(() => {
-    const abortController = new AbortController();
-
-    async function fetchMemberData() {
-      if (!session?.user?.id) return;
-
-      try {
-        setLoading(true);
-        const response = await fetch(`/api/member/${session.user.id}`, {
-          signal: abortController.signal
-        });
-        
-        if (!response.ok) throw new Error('Failed to fetch');
-        
-        const result = await response.json();
-
-        if (result.success && !abortController.signal.aborted) {
-          setMemberData(result.data);
-          if (result.data.profile) {
-            reset({
-              email: result.data.profile.email,
-              phone_number: result.data.profile.phone_number,
-              address: result.data.profile.address,
-            });
-          }
-        } else if (!abortController.signal.aborted) {
-          toast.error('Failed to load account data');
-        }
-      } catch (error: any) {
-        if (error.name !== 'AbortError' && !abortController.signal.aborted) {
-          console.error('Error fetching member data:', error);
-          toast.error('An error occurred while loading your account');
-        }
-      } finally {
-        if (!abortController.signal.aborted) {
-          setLoading(false);
-        }
+  // TanStack Query for fetching member data
+  const {
+    data: memberData,
+    isLoading: loading,
+    error: queryError,
+  } = useQuery<MemberData | null>({
+    queryKey: ['memberData', session?.user?.id],
+    queryFn: async () => {
+      if (!session?.user?.id) return null;
+      
+      const result = await getFnmemberById(session.user.id);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load account data');
       }
+      
+      return {
+        firstName: result.data.first_name,
+        lastName: result.data.last_name,
+        tNumber: result.data.t_number,
+        birthdate: result.data.birthdate,
+        profile: result.data.profile,
+        barcode: result.data.barcode,
+      } as MemberData;
+    },
+    enabled: status === 'authenticated' && !!session?.user?.id,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  // Reset form when member data loads
+  useEffect(() => {
+    if (memberData?.profile) {
+      reset({
+        email: memberData.profile.email,
+        phone_number: memberData.profile.phone_number,
+        address: memberData.profile.address,
+      });
     }
+  }, [memberData, reset]);
 
-    if (status === 'authenticated') {
-      fetchMemberData();
-    }
-
-    return () => {
-      abortController.abort();
-    };
-  }, [session?.user?.id, status, reset]);
-
-  const onSubmit = useCallback(async (data: ContactUpdateData) => {
-    try {
+  // Contact update mutation
+  const contactUpdateMutation = useMutation({
+    mutationFn: async (data: ContactUpdateData) => {
       const response = await fetch('/api/member/update-contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -131,30 +122,27 @@ export default function MemberAccount() {
           ...data
         })
       });
-
       const result = await response.json();
-
-      if (result.success) {
-        toast.success('Contact information updated successfully');
-        setIsEditing(false);
-        // Refresh member data
-        if (memberData && memberData.profile) {
-          setMemberData({
-            ...memberData,
-            profile: {
-              ...memberData.profile,
-              ...data
-            }
-          });
-        }
-      } else {
-        toast.error(result.error || 'Failed to update contact information');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update contact information');
       }
-    } catch (error) {
+      return result;
+    },
+    onSuccess: () => {
+      toast.success('Contact information updated successfully');
+      setIsEditing(false);
+      // Invalidate and refetch member data
+      queryClient.invalidateQueries({ queryKey: ['memberData', session?.user?.id] });
+    },
+    onError: (error: Error) => {
       console.error('Error updating contact info:', error);
-      toast.error('An error occurred while updating');
+      toast.error(error.message || 'An error occurred while updating');
     }
-  }, [session?.user?.id, memberData]);
+  });
+
+  const onSubmit = useCallback(async (data: ContactUpdateData) => {
+    contactUpdateMutation.mutate(data);
+  }, [contactUpdateMutation]);
 
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
@@ -164,17 +152,8 @@ export default function MemberAccount() {
     onSuccess: (result) => {
       if (result.success && result.data) {
         toast.success('Profile image updated successfully');
-        // Update member data with new image URL
-        if (memberData && memberData.profile) {
-          setMemberData({
-            ...memberData,
-            profile: {
-              ...memberData.profile,
-              image_url: result.data.imageUrl
-            }
-          });
-        }
         setImagePreview(null);
+        // Invalidate and refetch member data
         queryClient.invalidateQueries({ queryKey: ['memberData', session?.user?.id] });
       } else {
         toast.error(result.error || 'Failed to upload image');
@@ -226,16 +205,7 @@ export default function MemberAccount() {
     onSuccess: (result) => {
       if (result.success) {
         toast.success('Profile image deleted successfully');
-        // Update member data to remove image URL
-        if (memberData && memberData.profile) {
-          setMemberData({
-            ...memberData,
-            profile: {
-              ...memberData.profile,
-              image_url: null
-            }
-          });
-        }
+        // Invalidate and refetch member data
         queryClient.invalidateQueries({ queryKey: ['memberData', session?.user?.id] });
       } else {
         toast.error(result.error || 'Failed to delete image');
