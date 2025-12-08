@@ -398,6 +398,109 @@ DELETE /api/signup-forms/:formId
 
 ---
 
+### Get Submissions (For TCN_COMM Sync)
+
+TCN_COMM pulls submissions from the portal using this endpoint:
+
+```
+GET /api/signup-forms/submissions
+```
+
+**Headers:**
+```
+x-api-key: your-shared-secret-key
+Content-Type: application/json
+```
+
+**Query Parameters:**
+| Param | Type | Description |
+|-------|------|-------------|
+| `formId` | string | Filter by TCN_COMM form ID (tcn_form_id) |
+| `since` | string | ISO date - only return submissions after this date |
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "submissions": [
+      {
+        "id": "portal_submission_id",
+        "formId": "clx1abc123...",  // This should be tcn_form_id
+        "memberId": 12345,
+        "name": "John Doe",
+        "email": "john@example.com",
+        "phone": "555-1234",
+        "responses": {
+          "field_1": "John Doe",
+          "field_2": "Vegetarian"
+        },
+        "submittedAt": "2025-12-06T15:30:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+**Example Portal Implementation (Next.js):**
+```typescript
+// app/api/signup-forms/submissions/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+
+export async function GET(request: NextRequest) {
+  // Verify API key
+  const apiKey = request.headers.get('x-api-key')
+  if (apiKey !== process.env.TCN_COMM_API_KEY) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(request.url)
+  const formId = searchParams.get('formId')  // This is tcn_form_id
+  const since = searchParams.get('since')
+
+  // Build where clause
+  const where: any = {}
+  if (formId) {
+    // Look up the form by TCN_COMM's form ID
+    const form = await db.signupForm.findFirst({
+      where: { tcnFormId: formId }
+    })
+    if (!form) {
+      return NextResponse.json({ success: false, error: 'Form not found' }, { status: 404 })
+    }
+    where.formId = form.id
+  }
+  if (since) {
+    where.submittedAt = { gte: new Date(since) }
+  }
+
+  const submissions = await db.formSubmission.findMany({
+    where,
+    include: { form: true },
+    orderBy: { submittedAt: 'desc' }
+  })
+
+  return NextResponse.json({
+    success: true,
+    data: {
+      submissions: submissions.map(sub => ({
+        id: sub.id,
+        formId: sub.form.tcnFormId,  // Return TCN_COMM's form ID
+        memberId: sub.memberId,
+        name: sub.name,
+        email: sub.email,
+        phone: sub.phone,
+        responses: sub.responses,
+        submittedAt: sub.submittedAt.toISOString()
+      }))
+    }
+  })
+}
+```
+
+---
+
 ## Field Types
 
 | Type | Description | Options Required |
