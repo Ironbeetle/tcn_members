@@ -86,13 +86,21 @@ export default function MemberAccount() {
         throw new Error(result.error || 'Failed to load account data');
       }
       
+      // profile and barcode are arrays in the schema, get first item
+      const profileData = Array.isArray(result.data.profile) 
+        ? result.data.profile[0] 
+        : result.data.profile;
+      const barcodeData = Array.isArray(result.data.barcode) 
+        ? result.data.barcode[0] 
+        : result.data.barcode;
+      
       return {
         firstName: result.data.first_name,
         lastName: result.data.last_name,
         tNumber: result.data.t_number,
         birthdate: result.data.birthdate,
-        profile: result.data.profile,
-        barcode: result.data.barcode,
+        profile: profileData || null,
+        barcode: barcodeData || null,
       } as MemberData;
     },
     enabled: status === 'authenticated' && !!session?.user?.id,
