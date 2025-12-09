@@ -41,13 +41,6 @@ const departments = [
   }
 ];
 
-const menuItems = [
-  { label: "About Tataskweyak", to: "/pages/AboutTCN", color: "stone" as const },
-  { label: "About Who We Are", to: "/pages/WorldViewHome", color: "stone" as const },
-  { label: "Photo Gallery", to: "/pages/PhotoGallery", color: "stone" as const },
-  { label: "Home", to: "/", color: "stone" as const },
-];
-
 // Pie chart colors
 const CHART_COLORS = ['#059669', '#f59e0b', '#9ca3af']; // green for activated, amber for pending, gray for none
 
@@ -97,9 +90,6 @@ export default function TCNHomePage() {
     <div className="w-full min-h-screen genbkg">
       {/* Fixed Top Navigation */}
       <div className="fixed top-0 z-100 w-full shadow-md">
-        <div className="lg:hidden">
-          <Hamburger menuItems={menuItems} showBackButton={false} />
-        </div>
         <UserSessionBar showLogo={true} logoSrc="/tcnlogolg.png" />
       </div>
       

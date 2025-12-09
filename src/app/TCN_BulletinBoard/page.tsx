@@ -225,7 +225,7 @@ export default function page() {
       
       <div className="pt-16 lg:pt-16">
         {/* Back Button */}
-        <div className="max-w-[80vw] mx-auto px-4 pt-4">
+        <div className="max-w-7xl mx-auto px-4 pt-4">
           <button
             onClick={() => router.back()}
             className="flex items-center gap-2 text-stone-600 hover:text-amber-700 transition-colors mb-2"
@@ -236,7 +236,7 @@ export default function page() {
         </div>
 
         {/* 3-Column Layout */}
-        <div className="max-w-[80vw] mx-auto px-4 py-6">
+        <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
             {/* LEFT SIDEBAR - Category Filter */}
