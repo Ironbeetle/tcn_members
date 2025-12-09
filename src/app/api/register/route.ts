@@ -38,10 +38,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if member already has credentials
+    // Check if member already has credentials (auth record exists)
     if (member.auth) {
       return NextResponse.json(
-        { error: "This treaty number already has an active account. Please use the login page." },
+        { error: "This treaty number already has an account. Please use the login page." },
+        { status: 409 }
+      );
+    }
+
+    // Check activation status - PENDING means they started but didn't finish, ACTIVATED means fully done
+    if (member.activated === "ACTIVATED" || member.activated === "PENDING") {
+      return NextResponse.json(
+        { error: "This treaty number is already registered. Please use the login page to sign in." },
         { status: 409 }
       );
     }

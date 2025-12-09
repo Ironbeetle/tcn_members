@@ -52,9 +52,13 @@ export async function registerMember(formData: {
     const validatedData = registerSchema.parse(formData)
 
     // Check if treaty number exists in fnmember table
+    // Include auth and profile to check activation status
     const member = await prisma.fnmember.findUnique({
       where: { t_number: validatedData.t_number },
-      include: { auth: true }
+      include: { 
+        auth: true,
+        profile: true
+      }
     })
 
     if (!member) {
@@ -64,19 +68,19 @@ export async function registerMember(formData: {
       }
     }
 
-    // Check activation status
-    if (member.activated === "ACTIVATED") {
-      return {
-        success: false,
-        error: "This treaty number is already activated. Please try another treaty number or use the login page."
-      }
-    }
-
-    // Check if member already has credentials
+    // Check if member already has credentials (auth record exists)
     if (member.auth) {
       return {
         success: false,
-        error: "This treaty number already has an active account. Please use the login page."
+        error: "This treaty number already has an account. Please use the login page."
+      }
+    }
+
+    // Check if member has profile record (means they completed activation before)
+    if (member.profile.length > 0) {
+      return {
+        success: false,
+        error: "This treaty number is already registered. Please use the login page to sign in."
       }
     }
 
