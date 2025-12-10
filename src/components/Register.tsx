@@ -6,6 +6,11 @@ import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "./ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Label } from "./ui/label"
+import { 
+  sanitizeInput, 
+  isValidUsername, 
+  containsSuspiciousPatterns 
+} from "@/lib/security"
 
 type ActivateAccountFormData = {
   t_number: string
@@ -13,6 +18,7 @@ type ActivateAccountFormData = {
   email: string
   password: string
   confirmPassword: string
+  honeypot?: string  // Honeypot field to catch bots
 }
 
 export default function Register() {
@@ -27,6 +33,38 @@ export default function Register() {
   const password = watch("password")
 
   const onSubmit = async (data: ActivateAccountFormData) => {
+    // Check honeypot - if filled, it's likely a bot
+    if (data.honeypot) {
+      setError("Registration failed. Please try again.")
+      return
+    }
+
+    // Sanitize inputs
+    const sanitizedTNumber = sanitizeInput(data.t_number)
+    const sanitizedUsername = sanitizeInput(data.username)
+    const sanitizedEmail = sanitizeInput(data.email)
+
+    // Check for suspicious patterns in any field
+    if (containsSuspiciousPatterns(data.t_number) || 
+        containsSuspiciousPatterns(data.username) || 
+        containsSuspiciousPatterns(data.email)) {
+      setError("Invalid input detected.")
+      return
+    }
+
+    // Validate username format
+    if (!isValidUsername(sanitizedUsername)) {
+      setError("Invalid username format. Use only letters, numbers, and underscores (3-30 characters).")
+      return
+    }
+
+    // Validate treaty number format (alphanumeric, may start with T)
+    const tNumberRegex = /^T?\d{1,10}$/i
+    if (!tNumberRegex.test(sanitizedTNumber)) {
+      setError("Invalid treaty number format.")
+      return
+    }
+
     setIsLoading(true)
     setError("")
     setSuccess(false)
@@ -34,10 +72,10 @@ export default function Register() {
     try {
       // Call create credentials endpoint (backend verifies t_number exists in fnmember table)
       await createCredentials(
-        data.t_number,
-        data.username, 
-        data.email, 
-        data.password
+        sanitizedTNumber,
+        sanitizedUsername, 
+        sanitizedEmail, 
+        data.password  // Don't sanitize password
       )
       setSuccess(true)
       
@@ -69,6 +107,22 @@ export default function Register() {
           </div>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* Honeypot field - hidden from users, bots will fill it */}
+            <input
+              type="text"
+              {...register("honeypot")}
+              style={{ 
+                position: 'absolute', 
+                left: '-9999px',
+                opacity: 0,
+                height: 0,
+                width: 0,
+              }}
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+            />
+
             {/* Treaty Number Section */}
             <div className="pb-4 border-b">
               <h3 className="text-sm font-semibold mb-3 text-gray-700">Member Verification</h3>
