@@ -54,7 +54,6 @@ export default function page() {
             <div className="col-span-3 flex flex-col justify-center items-center p-4">
               <div className='w-full lg:w-3/7'>
                 <Link href="/TCN_Matters" className='panelalt'>
-                  <img src='/TCNintro.jpg' className='scale-image'/>
                   <div className="techtxtmb flex flex-col justify-center items-center p-2">
                     Meeting Presentation
                   </div>
