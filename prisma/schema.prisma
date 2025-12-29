@@ -7,7 +7,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["fnmemberlist", "tcnbulletin"]
+  schemas  = ["fnmemberlist", "tcnbulletin", "governance"]
 }
 
 enum ActivationStatus {
@@ -226,4 +226,36 @@ model signup_submission {
 
   @@unique([formId, fnmemberId])  // One submission per member per form
   @@schema("tcnbulletin")
+}
+
+// ==================== Chief & Council ====================
+
+model Chief_Council{
+  id          String      @id @default(cuid())
+  created     DateTime    @default(now())
+  position    Positions   @default(CHIEF)
+  first_name  String
+  last_name   String
+  portfolio   Portfolios  @default(TREATY)
+  email       String
+  phone       String
+  bio         String?
+  @@schema("governance")
+}
+
+enum Positions{
+  CHIEF
+  COUNCILLOR
+  @@schema("governance")
+}
+
+enum Portfolios{
+  TREATY
+  HEALTH
+  EDUCATION
+  HOUSING
+  ECONOMIC_DEVELOPMENT
+  ENVIRONMENT
+  PUBLIC_SAFETY
+  @@schema("governance")
 }
