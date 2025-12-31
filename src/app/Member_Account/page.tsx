@@ -22,9 +22,10 @@ import {
   ArrowLeft,
   Upload,
   Camera,
-  Trash2
+  Trash2,
+  Download,
+  FileText
 } from 'lucide-react';
-import Image from 'next/image';
 
 
 const contactUpdateSchema = z.object({
@@ -568,16 +569,13 @@ export default function MemberAccount() {
                 
                 {memberData.barcode ? (
                   <div className="space-y-4">
-                    <div className="bg-white rounded-xl border-2 border-amber-200 p-1">
-                      <div className="relative w-full aspect-[4/3] bg-white rounded-lg overflow-hidden">
-                        <Image
-                          src={`/api/barcode/image?barcode=${memberData.barcode.barcode}`}
-                          alt={`Barcode ${memberData.barcode.barcode}`}
-                          fill
-                          className="object-cover"
-                          unoptimized
-                        />
-                      </div>
+                    {/* PDF Viewer */}
+                    <div className="bg-white rounded-xl border-2 border-amber-200 overflow-hidden">
+                      <iframe
+                        src={`/api/barcode/image?barcode=${memberData.barcode.barcode}#toolbar=0&navpanes=0&scrollbar=0`}
+                        className="w-full h-64 sm:h-80"
+                        title={`Barcode ${memberData.barcode.barcode}`}
+                      />
                     </div>
 
                     <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-4 text-center">
@@ -585,13 +583,23 @@ export default function MemberAccount() {
                       <p className="text-lg font-bold text-amber-900 tracking-wider">{memberData.barcode.barcode}</p>
                     </div>
 
+                    {/* Download Button */}
+                    <a
+                      href={`/api/barcode/download?barcode=${memberData.barcode.barcode}`}
+                      download={`TCN-Barcode-${memberData.barcode.barcode}.pdf`}
+                      className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-amber-700 text-white rounded-lg hover:bg-amber-800 transition-colors"
+                    >
+                      <Download className="w-5 h-5" />
+                      <span className="font-medium">Download Barcode PDF</span>
+                    </a>
+
                     <p className="text-xs text-stone-500 text-center">
                       Show this barcode at community events and services
                     </p>
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <CreditCard className="w-12 h-12 text-stone-300 mx-auto mb-3" />
+                    <FileText className="w-12 h-12 text-stone-300 mx-auto mb-3" />
                     <p className="text-stone-600 text-sm">No barcode assigned</p>
                     <p className="text-xs text-stone-500 mt-2">Contact administration for barcode assignment</p>
                   </div>

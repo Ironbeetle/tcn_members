@@ -42,27 +42,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Read the JPG file from barcodes directory (not in public folder)
-    const barcodePath = join(process.cwd(), 'barcodes', `${barcodeNumber}.jpg`);
+    // Read the PDF file from barcodes directory (not in public folder)
+    const barcodePath = join(process.cwd(), 'barcodes', `${barcodeNumber}.pdf`);
     
     try {
       const fileBuffer = await readFile(barcodePath);
       
       return new NextResponse(fileBuffer, {
         headers: {
-          'Content-Type': 'image/jpeg',
+          'Content-Type': 'application/pdf',
           'Cache-Control': 'public, max-age=31536000, immutable',
         },
       });
     } catch (fileError) {
-      console.error('Error reading barcode image:', fileError);
+      console.error('Error reading barcode PDF:', fileError);
       return NextResponse.json(
-        { success: false, error: 'Barcode image not found' },
+        { success: false, error: 'Barcode PDF not found' },
         { status: 404 }
       );
     }
   } catch (error) {
-    console.error('Error fetching barcode image:', error);
+    console.error('Error fetching barcode PDF:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

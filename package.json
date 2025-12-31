@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "assign-barcodes": "tsx scripts/assign-barcodes.ts"
+    "assign-barcodes": "tsx scripts/assign-barcodes.ts",
+    "import-members": "tsx scripts/import-members.ts",
+    "import-barcodes": "tsx scripts/import-barcodes.ts",
+    "import-all": "tsx scripts/import-members-with-barcodes.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

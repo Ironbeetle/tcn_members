@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, recordRequest, getClientIdentifier, rateLimitResponse } from "@/lib/rate-limit";
 
 // Validation schema for registration
 const registerSchema = z.object({
@@ -20,6 +21,14 @@ const registerSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Check rate limit
+    const clientId = getClientIdentifier(request);
+    const rateLimit = checkRateLimit(clientId, 'register');
+    
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.retryAfter || 60);
+    }
+
     const body = await request.json();
     
     // Validate input
@@ -109,6 +118,9 @@ export async function POST(request: NextRequest) {
       data: { activated: "PENDING" }
     });
 
+    // Record successful registration (clears rate limit)
+    recordRequest(clientId, 'register', true);
+
     return NextResponse.json(
       {
         success: true,
@@ -125,6 +137,10 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("Registration error:", error);
+
+    // Record failed attempt
+    const clientId = getClientIdentifier(request);
+    recordRequest(clientId, 'register', false);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

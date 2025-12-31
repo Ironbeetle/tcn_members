@@ -69,7 +69,7 @@ export default function ResetPassword() {
         <CardHeader>
           <CardTitle>Reset Your Password</CardTitle>
           <CardDescription>
-            Enter the PIN from your email and create a new password
+            Enter the 6-digit code from your email and create a new password
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -105,21 +105,21 @@ export default function ResetPassword() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="pin">4-Digit PIN</Label>
+                <Label htmlFor="pin">6-Digit Reset Code</Label>
                 <input
                   id="pin"
                   type="text"
-                  maxLength={4}
+                  maxLength={6}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 text-center text-2xl tracking-widest"
                   {...register("pin", { 
-                    required: "PIN is required",
+                    required: "Reset code is required",
                     pattern: {
-                      value: /^\d{4}$/,
-                      message: "PIN must be 4 digits"
+                      value: /^\d{6}$/,
+                      message: "Code must be 6 digits"
                     }
                   })}
                   disabled={isLoading}
-                  placeholder="0000"
+                  placeholder="000000"
                 />
                 {errors.pin && (
                   <p className="text-sm text-red-600">{errors.pin.message}</p>

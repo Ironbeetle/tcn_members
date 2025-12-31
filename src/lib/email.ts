@@ -2,7 +2,7 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-export async function sendPasswordResetEmail(email: string, pin: string) {
+export async function sendPasswordResetEmail(email: string, code: string) {
   try {
     console.log('[Email Service] Attempting to send password reset email to:', email);
     console.log('[Email Service] Resend API Key present:', !!process.env.RESEND_API_KEY);
@@ -20,8 +20,8 @@ export async function sendPasswordResetEmail(email: string, pin: string) {
               .container { max-width: 600px; margin: 0 auto; padding: 20px; }
               .header { background: linear-gradient(135deg, #b45309 0%, #78350f 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
               .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; }
-              .pin-box { background: #fef3c7; border: 2px solid #f59e0b; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0; }
-              .pin { font-size: 32px; font-weight: bold; color: #78350f; letter-spacing: 8px; }
+              .code-box { background: #fef3c7; border: 2px solid #f59e0b; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0; }
+              .code { font-size: 36px; font-weight: bold; color: #78350f; letter-spacing: 8px; font-family: monospace; }
               .footer { background: #f9fafb; padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-radius: 0 0 8px 8px; }
               .warning { color: #dc2626; font-weight: bold; }
             </style>
@@ -35,14 +35,14 @@ export async function sendPasswordResetEmail(email: string, pin: string) {
                 <p>Hello,</p>
                 <p>We received a request to reset your password for your Tataskweyak Cree Nation Member Portal account.</p>
                 
-                <div class="pin-box">
-                  <p style="margin: 0 0 10px 0; font-size: 14px; color: #78350f;">Your Reset PIN:</p>
-                  <div class="pin">${pin}</div>
+                <div class="code-box">
+                  <p style="margin: 0 0 10px 0; font-size: 14px; color: #78350f;">Your Reset Code:</p>
+                  <div class="code">${code}</div>
                 </div>
                 
-                <p>Enter this PIN on the password reset page to create a new password.</p>
+                <p>Enter this 6-digit code on the password reset page to create a new password.</p>
                 
-                <p class="warning">⚠️ This PIN will expire in 15 minutes.</p>
+                <p class="warning">⚠️ This code will expire in 15 minutes.</p>
                 
                 <p style="margin-top: 30px;">If you didn't request this password reset, please ignore this email. Your password will remain unchanged.</p>
                 
@@ -56,6 +56,7 @@ export async function sendPasswordResetEmail(email: string, pin: string) {
           </body>
         </html>
       `,
+    });
     });
 
     if (error) {

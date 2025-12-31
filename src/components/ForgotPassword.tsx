@@ -39,12 +39,12 @@ export default function ForgotPassword() {
             <div className="space-y-4">
               <div className="p-4 bg-green-50 border border-green-200 rounded-md">
                 <p className="text-sm text-green-600">
-                  If an account exists with that email, you will receive a PIN shortly. Check your email and use the button below to enter it.
+                  If an account exists with that email, you will receive a 6-digit reset code shortly. Check your email and use the button below to enter it.
                 </p>
               </div>
               <Link href="/reset-password">
                 <Button className="w-full bg-amber-700 hover:bg-amber-800">
-                  Enter PIN & Reset Password
+                  Enter Code & Reset Password
                 </Button>
               </Link>
               <Link href="/TCN_Enter">

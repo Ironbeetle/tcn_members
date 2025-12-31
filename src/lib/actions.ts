@@ -890,6 +890,48 @@ export async function getBulletinsByCategory(category: string, limit: number = 1
   }
 }
 
+// ==================== CHIEF & COUNCIL ACTIONS ====================
+
+export async function getChiefAndCouncil(): Promise<ActionResult<any>> {
+  try {
+    const members = await prisma.chief_Council.findMany({
+      orderBy: [
+        { position: 'asc' },  // CHIEF comes before COUNCILLOR alphabetically
+        { last_name: 'asc' },
+      ],
+    });
+
+    return { success: true, data: members };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+export async function getChief(): Promise<ActionResult<any>> {
+  try {
+    const chief = await prisma.chief_Council.findFirst({
+      where: { position: 'CHIEF' },
+    });
+
+    return { success: true, data: chief };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+export async function getCouncillors(): Promise<ActionResult<any>> {
+  try {
+    const councillors = await prisma.chief_Council.findMany({
+      where: { position: 'COUNCILLOR' },
+      orderBy: { last_name: 'asc' },
+    });
+
+    return { success: true, data: councillors };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
 // ==================== PROFILE IMAGE ACTIONS ====================
 
 export async function uploadProfileImage(memberId: string, formData: FormData): Promise<ActionResult<{ imageUrl: string }>> {

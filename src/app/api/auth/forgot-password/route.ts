@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, recordRequest, getClientIdentifier, rateLimitResponse } from "@/lib/rate-limit";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Invalid email format"),
@@ -9,6 +10,17 @@ const forgotPasswordSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Check rate limit
+    const clientId = getClientIdentifier(request);
+    const rateLimit = checkRateLimit(clientId, 'passwordReset');
+    
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.retryAfter || 60);
+    }
+
+    // Record the request attempt
+    recordRequest(clientId, 'passwordReset', false);
+
     const body = await request.json();
     const validatedData = forgotPasswordSchema.parse(body);
 

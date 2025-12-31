@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
+import crypto from "crypto"
 import { signIn } from "next-auth/react"
 import { z } from "zod"
 import { sendPasswordResetEmail } from "./email"
@@ -187,37 +188,39 @@ export async function requestPasswordReset(email: string): Promise<ActionResult>
     if (!authRecord) {
       return {
         success: true,
-        message: "If the email exists in our system, a password reset link has been sent."
+        message: "If the email exists in our system, a password reset code has been sent."
       }
     }
 
-    // Generate 4-digit PIN
-    const pin = Math.floor(1000 + Math.random() * 9000).toString()
-    const pinExpiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
+    // Generate cryptographically secure 6-digit code
+    const resetCode = crypto.randomInt(100000, 999999).toString()
+    // Hash the code before storing (so it's not stored in plaintext)
+    const hashedCode = await bcrypt.hash(resetCode, 10)
+    const codeExpiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
 
-    // Save PIN to database
+    // Save hashed code to database
     await prisma.fnauth.update({
       where: { id: authRecord.id },
       data: {
-        pin,
-        pinExpiresAt,
+        pin: hashedCode,
+        pinExpiresAt: codeExpiresAt,
       },
     })
 
-    // Send PIN via email
-    console.log('[Password Reset] Sending PIN to user:', authRecord.email);
-    const emailResult = await sendPasswordResetEmail(authRecord.email, pin);
+    // Send code via email
+    console.log('[Password Reset] Sending reset code to user:', authRecord.email);
+    const emailResult = await sendPasswordResetEmail(authRecord.email, resetCode);
     
     if (!emailResult.success) {
       console.error('[Password Reset] Failed to send password reset email:', emailResult.error);
       // Still return success to not reveal if user exists, but log the error
     } else {
-      console.log('[Password Reset] PIN email sent successfully to:', authRecord.email);
+      console.log('[Password Reset] Reset code email sent successfully to:', authRecord.email);
     }
 
     return {
       success: true,
-      message: "If the email exists in our system, a password reset link has been sent."
+      message: "If the email exists in our system, a password reset code has been sent."
     }
   } catch (error) {
     console.error("Forgot password error:", error)

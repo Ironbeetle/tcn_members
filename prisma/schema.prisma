@@ -230,16 +230,33 @@ model signup_submission {
 
 // ==================== Chief & Council ====================
 
-model Chief_Council{
-  id          String      @id @default(cuid())
-  created     DateTime    @default(now())
-  position    Positions   @default(CHIEF)
+model Current_Council{
+  id          String        @id @default(cuid())
+  created     DateTime      @default(now())
+  updated     DateTime      @default(now()) @updatedAt
+  council_start DateTime  
+  council_end   DateTime
+  members Council_Member[]
+  history Council_History[]
+   // Fields for sync with master database
+  sourceId    String?       @unique  // ID from the master database
+  @@schema("governance")
+}
+
+model Council_Member{
+  id          String        @id @default(cuid())
+  created     DateTime      @default(now())
+  updated     DateTime      @default(now()) @updatedAt
+  position    Positions     @default(CHIEF)
   first_name  String
   last_name   String
-  portfolio   Portfolios  @default(TREATY)
+  portfolios  Portfolios[]  // Array of portfolios (up to 4)
   email       String
   phone       String
   bio         String?
+  image_url   String?       // URL to profile photo
+  councilId   String?
+  Current_Council Current_Council? @relation(fields: [councilId], references: [id], onDelete: Cascade)
   @@schema("governance")
 }
 
@@ -257,5 +274,16 @@ enum Portfolios{
   ECONOMIC_DEVELOPMENT
   ENVIRONMENT
   PUBLIC_SAFETY
+  @@schema("governance")
+}
+
+model Council_History{
+  id          String        @id @default(cuid())
+  created     DateTime      @default(now())
+  updated     DateTime      @default(now()) @updatedAt
+  council_start DateTime  
+  council_end   DateTime
+  councilId   String?
+  Current_Council Current_Council? @relation(fields: [councilId], references: [id], onDelete: Cascade)
   @@schema("governance")
 }

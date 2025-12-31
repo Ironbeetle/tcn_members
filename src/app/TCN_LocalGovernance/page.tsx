@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { queryBulletins } from '@/lib/actions';
+import { queryBulletins, getChiefAndCouncil } from '@/lib/actions';
 import { 
   Users,
   Crown,
@@ -23,87 +23,34 @@ import {
   ChevronDown,
   ChevronUp,
   Calendar,
-  ExternalLink
+  ExternalLink,
+  User
 } from 'lucide-react';
 
-// Chief and Council data
+// Chief and Council type matching database schema
 interface CouncilMember {
   id: string;
-  name: string;
-  position: string;
-  portfolios: string[];
-  photo?: string;
-  email?: string;
-  phone?: string;
-  bio?: string;
+  created: Date;
+  position: 'CHIEF' | 'COUNCILLOR';
+  first_name: string;
+  last_name: string;
+  portfolio: string;
+  email: string;
+  phone: string;
+  bio?: string | null;
+  image_url?: string | null;
 }
 
-const chiefAndCouncil: CouncilMember[] = [
-  {
-    id: 'chief',
-    name: 'Doreen Spence',
-    position: 'Chief',
-    portfolios: ['Overall Leadership', 'External Relations', 'Treaty Rights', 'Economic Development'],
-    photo: '/council/chief.jpg',
-    email: 'chief@tcn.ca',
-    phone: '(204) 342-2045',
-    bio: 'Providing leadership and representation for Tataskweyak Cree Nation.'
-  },
-  {
-    id: 'councillor-1',
-    name: 'Abby Garson-Wavey',
-    position: 'Councillor',
-    portfolios: ['Health', 'Social Services'],
-    photo: '/council/councillor1.jpg',
-    email: 'councillor1@tcn.ca',
-    phone: '(204) 342-2045'
-  },
-  {
-    id: 'councillor-2',
-    name: 'Alwyn Keeper',
-    position: 'Councillor',
-    portfolios: ['Education', 'Youth Programs'],
-    photo: '/council/councillor2.jpg',
-    email: 'councillor2@tcn.ca',
-    phone: '(204) 342-2045'
-  },
-  {
-    id: 'councillor-3',
-    name: 'Cynthia Ouskan',
-    position: 'Councillor',
-    portfolios: ['Housing', 'Infrastructure'],
-    photo: '/council/councillor3.jpg',
-    email: 'councillor3@tcn.ca',
-    phone: '(204) 342-2045'
-  },
-  {
-    id: 'councillor-4',
-    name: 'Ivan Keeper',
-    position: 'Councillor',
-    portfolios: ['Public Works', 'Utilities'],
-    photo: '/council/councillor4.jpg',
-    email: 'councillor4@tcn.ca',
-    phone: '(204) 342-2045'
-  },
-  {
-    id: 'councillor-5',
-    name: 'Joan Ouskan',
-    position: 'Councillor',
-    portfolios: ['Employment', 'Training'],
-    photo: '/council/councillor5.jpg',
-    email: 'councillor5@tcn.ca',
-    phone: '(204) 342-2045'
-  },
-  {
-    id: 'councillor-6',
-    name: 'Jonathon Kitchekeesik',
-    position: 'Councillor',
-    portfolios: ['Recreation', 'Culture & Heritage'],
-    photo: '/council/councillor6.jpg',
-    email: 'councillor6@tcn.ca',
-    phone: '(204) 342-2045'
-  },
-];
+// Portfolio display mapping
+const portfolioLabels: Record<string, string> = {
+  'TREATY': 'Treaty Rights',
+  'HEALTH': 'Health',
+  'EDUCATION': 'Education',
+  'HOUSING': 'Housing',
+  'ECONOMIC_DEVELOPMENT': 'Economic Development',
+  'ENVIRONMENT': 'Environment',
+  'PUBLIC_SAFETY': 'Public Safety',
+};
 
 // Community By-Laws
 interface ByLaw {
@@ -147,6 +94,9 @@ type Bulletin = {
 // Council Member Card Component
 function CouncilMemberCard({ member, isChief = false }: { member: CouncilMember; isChief?: boolean }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const fullName = `${member.first_name} ${member.last_name}`;
+  const positionLabel = member.position === 'CHIEF' ? 'Chief' : 'Councillor';
+  const portfolioLabel = portfolioLabels[member.portfolio] || member.portfolio;
 
   return (
     <motion.div
@@ -161,19 +111,25 @@ function CouncilMemberCard({ member, isChief = false }: { member: CouncilMember;
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-4">
-          {/* Photo placeholder */}
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 ${
+          {/* Photo or placeholder */}
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden ${
             isChief ? 'bg-amber-600' : 'bg-stone-600'
           }`}>
-            {isChief ? (
+            {member.image_url ? (
+              <img 
+                src={member.image_url} 
+                alt={fullName}
+                className="w-full h-full object-cover"
+              />
+            ) : isChief ? (
               <Crown className="w-8 h-8 text-white" />
             ) : (
-              <Users className="w-8 h-8 text-white" />
+              <User className="w-8 h-8 text-white" />
             )}
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-bold text-white">{member.name}</h3>
-            <p className="text-sm text-white/80">{member.position}</p>
+            <h3 className="text-lg font-bold text-white">{fullName}</h3>
+            <p className="text-sm text-white/80">{positionLabel}</p>
           </div>
           <div className="text-white">
             {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
@@ -181,23 +137,20 @@ function CouncilMemberCard({ member, isChief = false }: { member: CouncilMember;
         </div>
       </div>
 
-      {/* Portfolios always visible */}
+      {/* Portfolio always visible */}
       <div className="p-4 border-b border-stone-100">
         <div className="flex items-center gap-2 mb-2">
           <Briefcase className="w-4 h-4 text-amber-700" />
-          <span className="text-sm font-semibold text-stone-700">Portfolios</span>
+          <span className="text-sm font-semibold text-stone-700">Portfolio</span>
         </div>
         <div className="flex flex-wrap gap-2">
-          {member.portfolios.map((portfolio, idx) => (
-            <span 
-              key={idx} 
-              className={`px-3 py-1 text-xs rounded-full ${
-                isChief ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-700'
-              }`}
-            >
-              {portfolio}
-            </span>
-          ))}
+          <span 
+            className={`px-3 py-1 text-xs rounded-full ${
+              isChief ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-700'
+            }`}
+          >
+            {portfolioLabel}
+          </span>
         </div>
       </div>
 
@@ -279,6 +232,26 @@ export default function TCNLocalGovernancePage() {
   const [selectedBulletin, setSelectedBulletin] = useState<Bulletin | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // TanStack Query for fetching Chief & Council from database
+  const {
+    data: councilData,
+    isLoading: loadingCouncil,
+  } = useQuery({
+    queryKey: ['chiefAndCouncil'],
+    queryFn: async () => {
+      const result = await getChiefAndCouncil();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load council data');
+      }
+      
+      return result.data as CouncilMember[];
+    },
+    enabled: status === 'authenticated',
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
+
   // TanStack Query for fetching Chief & Council bulletins
   const {
     data: bulletinsData,
@@ -308,6 +281,10 @@ export default function TCNLocalGovernancePage() {
   // Extract bulletins from query data
   const bulletins: Bulletin[] = bulletinsData?.bulletins || [];
 
+  // Extract chief and councillors from query data
+  const chief = councilData?.find((m: CouncilMember) => m.position === 'CHIEF') || null;
+  const councillors = councilData?.filter((m: CouncilMember) => m.position === 'COUNCILLOR') || [];
+
   // Modal handlers
   const openBulletinModal = useCallback((bulletin: Bulletin) => {
     setSelectedBulletin(bulletin);
@@ -318,10 +295,6 @@ export default function TCNLocalGovernancePage() {
     setIsModalOpen(false);
     setSelectedBulletin(null);
   }, []);
-
-  // Get chief and councillors
-  const chief = chiefAndCouncil.find(m => m.position === 'Chief');
-  const councillors = chiefAndCouncil.filter(m => m.position === 'Councillor');
 
   if (status === "loading") {
     return (
@@ -471,11 +444,11 @@ export default function TCNLocalGovernancePage() {
                 <h3 className="font-bold text-blue-900 mb-3">Governance</h3>
                 <div className="space-y-3 text-sm">
                   <div>
-                    <div className="text-2xl font-bold text-blue-700">1</div>
+                    <div className="text-2xl font-bold text-blue-700">{chief ? 1 : 0}</div>
                     <div className="text-xs text-blue-800">Chief</div>
                   </div>
                   <div className="border-t border-blue-200 pt-2">
-                    <div className="text-2xl font-bold text-blue-700">6</div>
+                    <div className="text-2xl font-bold text-blue-700">{councillors.length}</div>
                     <div className="text-xs text-blue-800">Councillors</div>
                   </div>
                   <div className="border-t border-blue-200 pt-2">
@@ -505,36 +478,53 @@ export default function TCNLocalGovernancePage() {
               {/* Tab Content */}
               {activeTab === 'council' && (
                 <div className="space-y-4">
-                  {/* Chief */}
-                  {chief && (
-                    <div>
-                      <h3 className="text-sm font-bold text-stone-600 px-2 mb-3 flex items-center gap-2">
-                        <Crown className="w-4 h-4 text-amber-700" />
-                        Chief
-                      </h3>
-                      <CouncilMemberCard member={chief} isChief={true} />
+                  {loadingCouncil ? (
+                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-12 text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+                      <p className="text-stone-600">Loading council members...</p>
                     </div>
-                  )}
+                  ) : !councilData || councilData.length === 0 ? (
+                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-12 text-center">
+                      <Users className="w-12 h-12 text-stone-300 mx-auto mb-4" />
+                      <p className="text-stone-600">No council members found.</p>
+                      <p className="text-xs text-stone-500 mt-2">Council profiles will be synced from the master database.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Chief */}
+                      {chief && (
+                        <div>
+                          <h3 className="text-sm font-bold text-stone-600 px-2 mb-3 flex items-center gap-2">
+                            <Crown className="w-4 h-4 text-amber-700" />
+                            Chief
+                          </h3>
+                          <CouncilMemberCard member={chief} isChief={true} />
+                        </div>
+                      )}
 
-                  {/* Councillors */}
-                  <div>
-                    <h3 className="text-sm font-bold text-stone-600 px-2 mb-3 mt-6 flex items-center gap-2">
-                      <Users className="w-4 h-4 text-stone-500" />
-                      Council Members
-                    </h3>
-                    <div className="space-y-3">
-                      {councillors.map((councillor, index) => (
-                        <motion.div
-                          key={councillor.id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: index * 0.05 }}
-                        >
-                          <CouncilMemberCard member={councillor} />
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
+                      {/* Councillors */}
+                      {councillors.length > 0 && (
+                        <div>
+                          <h3 className="text-sm font-bold text-stone-600 px-2 mb-3 mt-6 flex items-center gap-2">
+                            <Users className="w-4 h-4 text-stone-500" />
+                            Council Members
+                          </h3>
+                          <div className="space-y-3">
+                            {councillors.map((councillor: CouncilMember, index: number) => (
+                              <motion.div
+                                key={councillor.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3, delay: index * 0.05 }}
+                              >
+                                <CouncilMemberCard member={councillor} />
+                              </motion.div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 

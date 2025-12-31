@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, recordRequest, getClientIdentifier, rateLimitResponse, clearRateLimit } from "@/lib/rate-limit";
 
 const resetPasswordSchema = z.object({
   email: z.string().email("Invalid email format"),
-  pin: z.string().regex(/^\d{4}$/, "PIN must be 4 digits"),
+  pin: z.string().regex(/^\d{6}$/, "Code must be 6 digits"),
   newPassword: z.string()
     .min(8, "Password must be at least 8 characters")
     .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
@@ -14,7 +15,17 @@ const resetPasswordSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  // Get client ID for rate limiting
+  const clientId = getClientIdentifier(request);
+  
   try {
+    // Check rate limit (use login type since this is an auth action)
+    const rateLimit = checkRateLimit(clientId, 'login');
+    
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.retryAfter || 60);
+    }
+
     const body = await request.json();
     const validatedData = resetPasswordSchema.parse(body);
 
@@ -33,15 +44,18 @@ export async function POST(request: NextRequest) {
     // Check if PIN has expired
     if (authRecord.pinExpiresAt < new Date()) {
       return NextResponse.json(
-        { error: "PIN has expired. Please request a new password reset." },
+        { error: "Reset code has expired. Please request a new password reset." },
         { status: 400 }
       );
     }
 
-    // Verify PIN
-    if (authRecord.pin !== validatedData.pin) {
+    // Verify PIN using bcrypt compare (code is hashed in database)
+    const isValidCode = await bcrypt.compare(validatedData.pin, authRecord.pin);
+    if (!isValidCode) {
+      // Record failed attempt
+      recordRequest(clientId, 'login', false);
       return NextResponse.json(
-        { error: "Invalid PIN" },
+        { error: "Invalid reset code" },
         { status: 400 }
       );
     }
@@ -60,6 +74,10 @@ export async function POST(request: NextRequest) {
         lockedUntil: null,
       },
     });
+
+    // Clear rate limits on successful password reset
+    clearRateLimit(clientId, 'login');
+    clearRateLimit(clientId, 'passwordReset');
 
     console.log('[Password Reset API] Password successfully reset for:', validatedData.email);
 
