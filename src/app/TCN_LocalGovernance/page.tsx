@@ -34,11 +34,23 @@ interface CouncilMember {
   position: 'CHIEF' | 'COUNCILLOR';
   first_name: string;
   last_name: string;
-  portfolio: string;
+  portfolios: string[];  // Array of portfolios (up to 4)
   email: string;
   phone: string;
   bio?: string | null;
   image_url?: string | null;
+  councilId?: string | null;
+}
+
+interface CurrentCouncil {
+  id: string;
+  council_start: Date;
+  council_end: Date;
+}
+
+interface CouncilData {
+  council: CurrentCouncil | null;
+  members: CouncilMember[];
 }
 
 // Portfolio display mapping
@@ -50,6 +62,7 @@ const portfolioLabels: Record<string, string> = {
   'ECONOMIC_DEVELOPMENT': 'Economic Development',
   'ENVIRONMENT': 'Environment',
   'PUBLIC_SAFETY': 'Public Safety',
+  'LEADERSHIP': 'Leadership',
 };
 
 // Community By-Laws
@@ -96,7 +109,6 @@ function CouncilMemberCard({ member, isChief = false }: { member: CouncilMember;
   const [isExpanded, setIsExpanded] = useState(false);
   const fullName = `${member.first_name} ${member.last_name}`;
   const positionLabel = member.position === 'CHIEF' ? 'Chief' : 'Councillor';
-  const portfolioLabel = portfolioLabels[member.portfolio] || member.portfolio;
 
   return (
     <motion.div
@@ -137,20 +149,29 @@ function CouncilMemberCard({ member, isChief = false }: { member: CouncilMember;
         </div>
       </div>
 
-      {/* Portfolio always visible */}
+      {/* Portfolios always visible */}
       <div className="p-4 border-b border-stone-100">
         <div className="flex items-center gap-2 mb-2">
           <Briefcase className="w-4 h-4 text-amber-700" />
-          <span className="text-sm font-semibold text-stone-700">Portfolio</span>
+          <span className="text-sm font-semibold text-stone-700">
+            {member.portfolios.length > 1 ? 'Portfolios' : 'Portfolio'}
+          </span>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span 
-            className={`px-3 py-1 text-xs rounded-full ${
-              isChief ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-700'
-            }`}
-          >
-            {portfolioLabel}
-          </span>
+          {member.portfolios.length > 0 ? (
+            member.portfolios.map((portfolio, index) => (
+              <span 
+                key={index}
+                className={`px-3 py-1 text-xs rounded-full ${
+                  isChief ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-700'
+                }`}
+              >
+                {portfolioLabels[portfolio] || portfolio}
+              </span>
+            ))
+          ) : (
+            <span className="text-sm text-stone-400">No portfolio assigned</span>
+          )}
         </div>
       </div>
 
@@ -245,7 +266,7 @@ export default function TCNLocalGovernancePage() {
         throw new Error(result.error || 'Failed to load council data');
       }
       
-      return result.data as CouncilMember[];
+      return result.data as CouncilData;
     },
     enabled: status === 'authenticated',
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -281,9 +302,11 @@ export default function TCNLocalGovernancePage() {
   // Extract bulletins from query data
   const bulletins: Bulletin[] = bulletinsData?.bulletins || [];
 
-  // Extract chief and councillors from query data
-  const chief = councilData?.find((m: CouncilMember) => m.position === 'CHIEF') || null;
-  const councillors = councilData?.filter((m: CouncilMember) => m.position === 'COUNCILLOR') || [];
+  // Extract council info and members from query data
+  const currentCouncil = councilData?.council || null;
+  const councilMembers = councilData?.members || [];
+  const chief = councilMembers.find((m: CouncilMember) => m.position === 'CHIEF') || null;
+  const councillors = councilMembers.filter((m: CouncilMember) => m.position === 'COUNCILLOR') || [];
 
   // Modal handlers
   const openBulletinModal = useCallback((bulletin: Bulletin) => {
@@ -451,10 +474,6 @@ export default function TCNLocalGovernancePage() {
                     <div className="text-2xl font-bold text-blue-700">{councillors.length}</div>
                     <div className="text-xs text-blue-800">Councillors</div>
                   </div>
-                  <div className="border-t border-blue-200 pt-2">
-                    <div className="text-2xl font-bold text-blue-700">{communityByLaws.length}</div>
-                    <div className="text-xs text-blue-800">Active By-Laws</div>
-                  </div>
                 </div>
               </motion.div>
             </aside>
@@ -483,7 +502,7 @@ export default function TCNLocalGovernancePage() {
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
                       <p className="text-stone-600">Loading council members...</p>
                     </div>
-                  ) : !councilData || councilData.length === 0 ? (
+                  ) : councilMembers.length === 0 ? (
                     <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-12 text-center">
                       <Users className="w-12 h-12 text-stone-300 mx-auto mb-4" />
                       <p className="text-stone-600">No council members found.</p>
@@ -491,6 +510,18 @@ export default function TCNLocalGovernancePage() {
                     </div>
                   ) : (
                     <>
+                      {/* Council Term Info */}
+                      {currentCouncil && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+                          <div className="flex items-center gap-2 text-amber-800">
+                            <Calendar className="w-4 h-4" />
+                            <span className="text-sm font-medium">
+                              Council Term: {new Date(currentCouncil.council_start).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} - {new Date(currentCouncil.council_end).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Chief */}
                       {chief && (
                         <div>

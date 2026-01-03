@@ -28,7 +28,7 @@ function parseCSV(content: string): CSVRow[] {
       row[header.trim()] = values[index]?.trim() || '';
     });
     
-    return row as CSVRow;
+    return row as unknown as CSVRow;
   });
 }
 

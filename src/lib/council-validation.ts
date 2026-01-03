@@ -15,7 +15,8 @@ export const portfolioEnum = z.enum([
   'HOUSING',
   'ECONOMIC_DEVELOPMENT',
   'ENVIRONMENT',
-  'PUBLIC_SAFETY'
+  'PUBLIC_SAFETY',
+  'LEADERSHIP'
 ]);
 
 // Schema for syncing a council member from master database
@@ -24,7 +25,7 @@ export const councilMemberSyncSchema = z.object({
   position: positionEnum,
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
-  portfolio: portfolioEnum,
+  portfolios: z.array(portfolioEnum).default([]),  // Array of portfolios
   email: z.string().email('Invalid email format'),
   phone: z.string().min(1, 'Phone number is required'),
   bio: z.string().optional().nullable(),
@@ -38,7 +39,7 @@ export const councilMemberUpdateSchema = z.object({
   position: positionEnum.optional(),
   first_name: z.string().min(1).optional(),
   last_name: z.string().min(1).optional(),
-  portfolio: portfolioEnum.optional(),
+  portfolios: z.array(portfolioEnum).optional(),  // Array of portfolios
   email: z.string().email().optional(),
   phone: z.string().min(1).optional(),
   bio: z.string().optional().nullable(),

@@ -24,7 +24,7 @@ export const Slide1: React.FC<SlidePanelProps> = ({
             <div className="bg-stone-700/50 rounded-lg p-2 lg:p-6 border border-amber-600/30 h-full w-full lg:w-9/10 overflow-hidden"> 
              
               <div className="grid grid-cols-1 lg:grid-cols-5 gap-1 mt-2 h-full">                
-                <div className="col-span-3 flex flex-col justify-evenly techtxttitle p-1 mb-4 lg:mb-0">
+                <div className="col-span-3 flex flex-col justify-evenly techtxtmb p-1 mb-4 lg:mb-0">
                   <span className="techtxttitley">
                     The Reality We Face
                   </span>

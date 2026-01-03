@@ -16,6 +16,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import  Link  from "next/link"
+import Image from "next/image";
 
 
 export default function page() {
@@ -52,10 +53,16 @@ export default function page() {
             </div>
             {/* right side link menu */}
             <div className="col-span-3 flex flex-col justify-center items-center p-4">
-              <div className='w-full lg:w-3/7'>
-                <Link href="/TCN_Matters" className='panelalt'>
-                  <div className="techtxtmb flex flex-col justify-center items-center p-2">
-                    Meeting Presentation
+              <div className='w-full h-auto'>
+                <Link href="/TCN_Matters" className='panelalt h-auto'>
+                  <div className="techtxtmb flex flex-col justify-center items-center p-2 h-full">
+                    <Image src='/tcnlogosm.png' 
+                      className='object-contain'
+                      width={150}
+                      height={150}
+                      alt='TCN Logo'  
+                    />
+                    Enter
                   </div>
                 </Link>
               </div>

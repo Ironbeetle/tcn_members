@@ -57,7 +57,6 @@ export async function sendPasswordResetEmail(email: string, code: string) {
         </html>
       `,
     });
-    });
 
     if (error) {
       console.error('[Email Service] Resend error:', error);

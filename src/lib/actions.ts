@@ -894,14 +894,34 @@ export async function getBulletinsByCategory(category: string, limit: number = 1
 
 export async function getChiefAndCouncil(): Promise<ActionResult<any>> {
   try {
-    const members = await prisma.chief_Council.findMany({
-      orderBy: [
-        { position: 'asc' },  // CHIEF comes before COUNCILLOR alphabetically
-        { last_name: 'asc' },
-      ],
+    // First, get the current council
+    const currentCouncil = await prisma.current_Council.findFirst({
+      orderBy: { created: 'desc' },
+      include: {
+        members: {
+          orderBy: [
+            { position: 'asc' },  // CHIEF comes before COUNCILLOR alphabetically
+            { last_name: 'asc' },
+          ],
+        },
+      },
     });
 
-    return { success: true, data: members };
+    if (!currentCouncil) {
+      return { success: true, data: { council: null, members: [] } };
+    }
+
+    return { 
+      success: true, 
+      data: {
+        council: {
+          id: currentCouncil.id,
+          council_start: currentCouncil.council_start,
+          council_end: currentCouncil.council_end,
+        },
+        members: currentCouncil.members,
+      }
+    };
   } catch (error: any) {
     return { success: false, error: handlePrismaError(error) };
   }
@@ -909,7 +929,7 @@ export async function getChiefAndCouncil(): Promise<ActionResult<any>> {
 
 export async function getChief(): Promise<ActionResult<any>> {
   try {
-    const chief = await prisma.chief_Council.findFirst({
+    const chief = await prisma.council_Member.findFirst({
       where: { position: 'CHIEF' },
     });
 
@@ -921,7 +941,7 @@ export async function getChief(): Promise<ActionResult<any>> {
 
 export async function getCouncillors(): Promise<ActionResult<any>> {
   try {
-    const councillors = await prisma.chief_Council.findMany({
+    const councillors = await prisma.council_Member.findMany({
       where: { position: 'COUNCILLOR' },
       orderBy: { last_name: 'asc' },
     });

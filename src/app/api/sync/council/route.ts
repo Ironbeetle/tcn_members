@@ -49,13 +49,13 @@ export async function POST(request: NextRequest) {
     const data = validation.data;
 
     // Upsert - create or update based on sourceId
-    const member = await prisma.chief_Council.upsert({
+    const member = await prisma.council_Member.upsert({
       where: { sourceId: data.sourceId },
       update: {
         position: data.position,
         first_name: data.first_name,
         last_name: data.last_name,
-        portfolio: data.portfolio,
+        portfolios: data.portfolios,
         email: data.email,
         phone: data.phone,
         bio: data.bio,
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         position: data.position,
         first_name: data.first_name,
         last_name: data.last_name,
-        portfolio: data.portfolio,
+        portfolios: data.portfolios,
         email: data.email,
         phone: data.phone,
         bio: data.bio,
@@ -109,13 +109,13 @@ async function handleBatchSync(request: NextRequest, body: any) {
         case 'CREATE':
         case 'UPSERT': {
           const data = councilMemberSyncSchema.parse(item.data);
-          await prisma.chief_Council.upsert({
+          await prisma.council_Member.upsert({
             where: { sourceId: data.sourceId },
             update: {
               position: data.position,
               first_name: data.first_name,
               last_name: data.last_name,
-              portfolio: data.portfolio,
+              portfolios: data.portfolios,
               email: data.email,
               phone: data.phone,
               bio: data.bio,
@@ -127,7 +127,7 @@ async function handleBatchSync(request: NextRequest, body: any) {
               position: data.position,
               first_name: data.first_name,
               last_name: data.last_name,
-              portfolio: data.portfolio,
+              portfolios: data.portfolios,
               email: data.email,
               phone: data.phone,
               bio: data.bio,
@@ -140,13 +140,13 @@ async function handleBatchSync(request: NextRequest, body: any) {
 
         case 'UPDATE': {
           const updateData = councilMemberUpdateSchema.parse(item.data);
-          await prisma.chief_Council.update({
+          await prisma.council_Member.update({
             where: { sourceId: updateData.sourceId },
             data: {
               ...(updateData.position && { position: updateData.position }),
               ...(updateData.first_name && { first_name: updateData.first_name }),
               ...(updateData.last_name && { last_name: updateData.last_name }),
-              ...(updateData.portfolio && { portfolio: updateData.portfolio }),
+              ...(updateData.portfolios && { portfolios: updateData.portfolios }),
               ...(updateData.email && { email: updateData.email }),
               ...(updateData.phone && { phone: updateData.phone }),
               ...(updateData.bio !== undefined && { bio: updateData.bio }),
@@ -161,11 +161,11 @@ async function handleBatchSync(request: NextRequest, body: any) {
         case 'DELETE': {
           const deleteData = councilMemberDeleteSchema.parse(item.data);
           if (deleteData.sourceId) {
-            await prisma.chief_Council.delete({
+            await prisma.council_Member.delete({
               where: { sourceId: deleteData.sourceId },
             });
           } else if (deleteData.id) {
-            await prisma.chief_Council.delete({
+            await prisma.council_Member.delete({
               where: { id: deleteData.id },
             });
           }
@@ -210,13 +210,13 @@ export async function PUT(request: NextRequest) {
 
     const data = validation.data;
 
-    const member = await prisma.chief_Council.update({
+    const member = await prisma.council_Member.update({
       where: { sourceId: data.sourceId },
       data: {
         ...(data.position && { position: data.position }),
         ...(data.first_name && { first_name: data.first_name }),
         ...(data.last_name && { last_name: data.last_name }),
-        ...(data.portfolio && { portfolio: data.portfolio }),
+        ...(data.portfolios && { portfolios: data.portfolios }),
         ...(data.email && { email: data.email }),
         ...(data.phone && { phone: data.phone }),
         ...(data.bio !== undefined && { bio: data.bio }),
@@ -257,11 +257,11 @@ export async function DELETE(request: NextRequest) {
 
     let deletedMember;
     if (sourceId) {
-      deletedMember = await prisma.chief_Council.delete({
+      deletedMember = await prisma.council_Member.delete({
         where: { sourceId },
       });
     } else if (id) {
-      deletedMember = await prisma.chief_Council.delete({
+      deletedMember = await prisma.council_Member.delete({
         where: { id },
       });
     }
@@ -294,7 +294,7 @@ export async function GET(request: NextRequest) {
 
     // If sourceId provided, return single member
     if (sourceId) {
-      const member = await prisma.chief_Council.findUnique({
+      const member = await prisma.council_Member.findUnique({
         where: { sourceId },
       });
 
@@ -312,7 +312,7 @@ export async function GET(request: NextRequest) {
       where.position = position;
     }
 
-    const members = await prisma.chief_Council.findMany({
+    const members = await prisma.council_Member.findMany({
       where,
       orderBy: [
         { position: 'asc' },

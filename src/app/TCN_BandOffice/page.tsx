@@ -14,7 +14,6 @@ import {
   Mail,
   MapPin,
   ArrowLeft,
-  Droplets,
   Home,
   Shield,
   Dumbbell,
@@ -51,6 +50,28 @@ interface Department {
   programs?: string[];
 }
 
+// External organizations data
+interface ExternalOrg {
+  id: string;
+  name: string;
+  phone?: string;
+  fax?: string;
+  tollFree?: string;
+  description: string;
+}
+
+const externalOrganizations: ExternalOrg[] = [
+  { id: 'ucn', name: 'University College of the North', phone: '(204) 342-2995', fax: '(204) 342-2621', description: 'Post-secondary education services' },
+  { id: 'wawatay', name: 'Wawatay Inn', phone: '(204) 677-1000', fax: '(204) 778-8041', description: 'Accommodation in Thompson' },
+  { id: 'aboriginal-strategies', name: 'Aboriginal Strategies', phone: '(204) 942-2944', tollFree: '1-800-761-7110', fax: '(204) 949-0564', description: 'Indigenous consultation services' },
+  { id: 'ktc', name: 'Keewatin Tribal Council', phone: '(204) 677-2341', fax: '(204) 677-0255', description: 'Tribal council services' },
+  { id: 'mko', name: 'MKO (Manitoba Keewatinowi Okimakanak)', phone: '(204) 677-1000', fax: '(204) 778-7655', description: 'Northern Manitoba First Nations advocacy' },
+  { id: 'ininew', name: 'Ininew Office', phone: '(204) 956-0900', fax: '(204) 956-4766', description: 'Regional support services' },
+  { id: 'day-school', name: 'Day School Settlement', tollFree: '1-888-221-2898', description: 'Day school claims support' },
+  { id: 'water-settlements', name: 'Water Settlements', tollFree: '1-833-252-4220', description: 'Drinking water settlement claims' },
+  { id: 'thompson-ford', name: 'Thompson Ford', phone: '(204) 778-6386', description: 'Vehicle sales and service' },
+];
+
 const departments: Department[] = [
   {
     id: 'band-office',
@@ -66,30 +87,13 @@ const departments: Department[] = [
     email: 'bandoffice@tcn.ca',
     hours: 'Monday - Friday: 8:30 AM - 4:30 PM',
     staff: [
-      { name: 'TBD', position: 'Chief Executive Officer', phone: '(204) 342-2045', email: 'ceo@tcn.ca' },
-      { name: 'TBD', position: 'Band Manager', phone: '(204) 342-2045', email: 'bandmanager@tcn.ca' },
-      { name: 'TBD', position: 'Finance Manager', phone: '(204) 342-2045', email: 'finance@tcn.ca' },
-      { name: 'TBD', position: 'Membership Clerk', phone: '(204) 342-2045', email: 'membership@tcn.ca' },
+      { name: 'Melissa Spence', position: 'Receptionist', phone: '(204) 342-2045' },
+      { name: 'Karlene Anderson', position: 'C/C Assistant', phone: '(204) 342-2045' },
+      { name: 'Sheila Flett', position: 'HR Manager', phone: '(204) 342-2045' },
+      { name: 'Darlene Bittern', position: 'Trust Finance', phone: '(204) 342-2045' },
+      { name: 'Betsy Keeper', position: 'Registry Membership', phone: '(204) 342-2045' },
     ],
-    programs: ['Membership Services', 'Treaty Payments', 'Status Cards', 'Birth/Death Registration']
-  },
-  {
-    id: 'public-utilities',
-    name: 'Public Utilities',
-    description: 'Water, sewer, and essential utility services for the community.',
-    icon: Droplets,
-    color: 'blue',
-    gradientFrom: 'from-blue-700',
-    gradientTo: 'to-blue-900',
-    phone: '(204) 342-2045',
-    email: 'utilities@tcn.ca',
-    hours: 'Monday - Friday: 8:30 AM - 4:30 PM | Emergency: 24/7',
-    staff: [
-      { name: 'TBD', position: 'Public Works Manager', phone: '(204) 342-2045' },
-      { name: 'TBD', position: 'Water Treatment Operator', phone: '(204) 342-2045' },
-      { name: 'TBD', position: 'Maintenance Supervisor', phone: '(204) 342-2045' },
-    ],
-    programs: ['Water Treatment', 'Sewer Services', 'Road Maintenance', 'Snow Removal']
+    programs: ['Membership Services', 'Treaty Payments', 'Status Cards', 'Birth/Death Registration', 'Human Resources']
   },
   {
     id: 'housing',
@@ -103,87 +107,99 @@ const departments: Department[] = [
     email: 'housing@tcn.ca',
     hours: 'Monday - Friday: 8:30 AM - 4:30 PM',
     staff: [
-      { name: 'TBD', position: 'Housing Manager', phone: '(204) 342-2045', email: 'housingmanager@tcn.ca' },
-      { name: 'TBD', position: 'Housing Coordinator', phone: '(204) 342-2045' },
-      { name: 'TBD', position: 'Maintenance Foreman', phone: '(204) 342-2045' },
+      { name: 'Roddy Spence', position: 'Housing Manager', phone: '(204) 342-2045' },
+      { name: 'Cliff Tanner', position: 'Housing Assistant Manager', phone: '(204) 342-2045' },
+      { name: 'Clarise Martin', position: 'Housing Admin Assistant', phone: '(204) 342-2045' },
     ],
     programs: ['Housing Applications', 'Home Repairs', 'Renovations', 'CMHC Programs', 'Emergency Repairs']
   },
   {
-    id: 'health-center',
-    name: 'Health Centre',
-    description: 'Primary healthcare, nursing services, and community health programs.',
+    id: 'social-services',
+    name: 'Social Services',
+    description: 'Social assistance, welfare support, and community outreach programs.',
     icon: Heart,
     color: 'green',
     gradientFrom: 'from-green-700',
     gradientTo: 'to-green-900',
-    phone: '(204) 342-2015',
-    fax: '(204) 342-2320',
-    email: 'health@tcn.ca',
-    hours: 'Monday - Friday: 8:30 AM - 4:30 PM | Emergency: Hospital',
+    phone: '(204) 342-2045',
+    fax: '(204) 342-2512',
+    email: 'socialservices@tcn.ca',
+    hours: 'Monday - Friday: 8:30 AM - 4:30 PM',
     staff: [
-      { name: 'TBD', position: 'Health Director', phone: '(204) 342-2015', email: 'healthdirector@tcn.ca' },
-      { name: 'TBD', position: 'Nurse in Charge', phone: '(204) 342-2015' },
-      { name: 'TBD', position: 'Community Health Representative', phone: '(204) 342-2015' },
-      { name: 'TBD', position: 'Mental Health Worker', phone: '(204) 342-2015' },
-      { name: 'TBD', position: 'NNADAP Worker', phone: '(204) 342-2015' },
+      { name: 'Louisa Spence', position: 'Welfare Administrator', phone: '(204) 342-2045' },
+      { name: 'Rebecca Brightnose', position: 'Welfare Assistant', phone: '(204) 342-2045' },
+      { name: 'Joan McGillivary', position: 'Outreach Worker', phone: '(204) 342-2045' },
     ],
-    programs: ['Primary Care', 'Immunizations', 'Prenatal Care', 'Diabetes Program', 'Mental Health Services', 'NNADAP', 'Home Care', 'Medical Transportation']
+    programs: ['Social Assistance', 'Emergency Support', 'Community Outreach', 'Family Support']
+  },
+  {
+    id: 'employment',
+    name: 'Employment & Training',
+    description: 'Employment services, job training, and workforce development programs.',
+    icon: Users,
+    color: 'indigo',
+    gradientFrom: 'from-indigo-700',
+    gradientTo: 'to-indigo-900',
+    phone: '(204) 342-2045',
+    email: 'employment@tcn.ca',
+    hours: 'Monday - Friday: 8:30 AM - 4:30 PM',
+    staff: [
+      { name: 'Sara Cole', position: 'Ongoing Jobs Manager', phone: '(204) 342-2045' },
+      { name: 'Yvonne Wastesicoot', position: 'ISETS Worker', phone: '(204) 342-2045' },
+    ],
+    programs: ['Job Placements', 'ISETS Training', 'Skills Development', 'Career Counseling']
+  },
+  {
+    id: 'prevention-services',
+    name: 'Prevention Services',
+    description: 'Community prevention programs and family support services.',
+    icon: Shield,
+    color: 'purple',
+    gradientFrom: 'from-purple-700',
+    gradientTo: 'to-purple-900',
+    phone: '(431) 354-1395',
+    email: 'prevention@tcn.ca',
+    hours: 'Monday - Friday: 8:30 AM - 4:30 PM',
+    staff: [
+      { name: 'TBD', position: 'Prevention Services Director', phone: '(431) 757-7095' },
+      { name: 'Beatrice Flett', position: 'Prevention Services', phone: '(431) 354-1395' },
+    ],
+    programs: ['Family Prevention', 'Youth Programs', 'Community Wellness', 'Support Services']
+  },
+  {
+    id: 'financial-building',
+    name: 'Financial Building',
+    description: 'Financial services and administration offices.',
+    icon: Building2,
+    color: 'slate',
+    gradientFrom: 'from-slate-700',
+    gradientTo: 'to-slate-900',
+    phone: '(204) 342-2025',
+    hours: 'Monday - Friday: 8:30 AM - 4:30 PM',
+    staff: [
+      { name: 'Finance Office Line 1', position: 'Financial Services', phone: '(204) 342-2025' },
+      { name: 'Finance Office Line 2', position: 'Financial Services', phone: '(204) 342-2032' },
+      { name: 'Finance Office Line 3', position: 'Financial Services', phone: '(204) 342-2054' },
+      { name: 'Finance Office Line 4', position: 'Financial Services', phone: '(204) 342-2075' },
+    ],
+    programs: ['Accounts Payable', 'Accounts Receivable', 'Payroll', 'Financial Planning']
   },
   {
     id: 'education-youth',
     name: 'Education - Youth',
     description: 'K-12 education services, student support, and youth programs.',
     icon: GraduationCap,
-    color: 'purple',
-    gradientFrom: 'from-purple-700',
-    gradientTo: 'to-purple-900',
+    color: 'blue',
+    gradientFrom: 'from-blue-700',
+    gradientTo: 'to-blue-900',
     phone: '(204) 342-2045',
     email: 'education@tcn.ca',
     hours: 'Monday - Friday: 8:30 AM - 4:30 PM',
     staff: [
-      { name: 'TBD', position: 'Education Director', phone: '(204) 342-2045', email: 'educationdirector@tcn.ca' },
+      { name: 'TBD', position: 'Education Director', phone: '(204) 342-2045' },
       { name: 'TBD', position: 'School Principal', phone: '(204) 342-2045' },
-      { name: 'TBD', position: 'Education Counselor', phone: '(204) 342-2045' },
-      { name: 'TBD', position: 'Student Support Worker', phone: '(204) 342-2045' },
     ],
     programs: ['Elementary School', 'High School', 'Special Education', 'School Lunch Program', 'Student Transportation']
-  },
-  {
-    id: 'education-adult',
-    name: 'Education - Adult Learning',
-    description: 'Adult education, post-secondary support, and training programs.',
-    icon: Users,
-    color: 'indigo',
-    gradientFrom: 'from-indigo-700',
-    gradientTo: 'to-indigo-900',
-    phone: '(204) 342-2045',
-    email: 'adulted@tcn.ca',
-    hours: 'Monday - Friday: 8:30 AM - 4:30 PM',
-    staff: [
-      { name: 'TBD', position: 'Adult Education Coordinator', phone: '(204) 342-2045', email: 'adulted@tcn.ca' },
-      { name: 'TBD', position: 'Post-Secondary Counselor', phone: '(204) 342-2045' },
-      { name: 'TBD', position: 'Training Coordinator', phone: '(204) 342-2045' },
-    ],
-    programs: ['GED Program', 'Post-Secondary Funding', 'Skills Training', 'Apprenticeship Support', 'Literacy Programs']
-  },
-  {
-    id: 'public-safety',
-    name: 'Public Safety',
-    description: 'Community safety, fire services, and emergency response.',
-    icon: Shield,
-    color: 'red',
-    gradientFrom: 'from-red-700',
-    gradientTo: 'to-red-900',
-    phone: '(204) 342-2045',
-    email: 'safety@tcn.ca',
-    hours: '24/7 Emergency Response',
-    staff: [
-      { name: 'TBD', position: 'Public Safety Director', phone: '(204) 342-2045', email: 'safety@tcn.ca' },
-      { name: 'TBD', position: 'Fire Chief', phone: '(204) 342-2045' },
-      { name: 'TBD', position: 'Community Safety Officer', phone: '(204) 342-2045' },
-    ],
-    programs: ['Fire Department', 'Emergency Services', 'Community Watch', 'Safety Education']
   },
   {
     id: 'arena',
@@ -197,9 +213,8 @@ const departments: Department[] = [
     email: 'arena@tcn.ca',
     hours: 'Monday - Sunday: Hours vary by season',
     staff: [
-      { name: 'TBD', position: 'Recreation Director', phone: '(204) 342-2045', email: 'recreation@tcn.ca' },
+      { name: 'TBD', position: 'Recreation Director', phone: '(204) 342-2045' },
       { name: 'TBD', position: 'Arena Manager', phone: '(204) 342-2045' },
-      { name: 'TBD', position: 'Program Coordinator', phone: '(204) 342-2045' },
     ],
     programs: ['Hockey Programs', 'Figure Skating', 'Youth Sports', 'Fitness Programs', 'Community Events']
   },
@@ -208,14 +223,14 @@ const departments: Department[] = [
     name: 'Split Lake Hotel',
     description: 'Accommodation services for visitors and community guests.',
     icon: Hotel,
-    color: 'slate',
-    gradientFrom: 'from-slate-700',
-    gradientTo: 'to-slate-900',
+    color: 'rose',
+    gradientFrom: 'from-rose-700',
+    gradientTo: 'to-rose-900',
     phone: '(204) 342-2045',
     email: 'hotel@tcn.ca',
     hours: 'Open 24/7',
     staff: [
-      { name: 'TBD', position: 'Hotel Manager', phone: '(204) 342-2045', email: 'hotelmanager@tcn.ca' },
+      { name: 'TBD', position: 'Hotel Manager', phone: '(204) 342-2045' },
       { name: 'TBD', position: 'Front Desk Supervisor', phone: '(204) 342-2045' },
     ],
     programs: ['Room Reservations', 'Conference Rooms', 'Catering Services']
@@ -232,9 +247,8 @@ const departments: Department[] = [
     email: 'daycare@tcn.ca',
     hours: 'Monday - Friday: 7:30 AM - 5:30 PM',
     staff: [
-      { name: 'TBD', position: 'Daycare Director', phone: '(204) 342-2045', email: 'daycare@tcn.ca' },
+      { name: 'TBD', position: 'Daycare Director', phone: '(204) 342-2045' },
       { name: 'TBD', position: 'Lead Early Childhood Educator', phone: '(204) 342-2045' },
-      { name: 'TBD', position: 'ECE Worker', phone: '(204) 342-2045' },
     ],
     programs: ['Infant Care', 'Toddler Program', 'Preschool', 'Head Start', 'After School Care']
   },
@@ -540,16 +554,13 @@ export default function TCNBandOfficePage() {
                   </div>
                   <div className="border-t border-red-200 pt-2">
                     <div className="font-medium text-red-800">RCMP</div>
-                    <a href="tel:2043422112" className="text-red-700">(204) 342-2112</a>
+                    <a href="tel:2046776911" className="text-red-700">(204) 677-6911</a>
                   </div>
                   <div className="border-t border-red-200 pt-2">
-                    <div className="font-medium text-red-800">Health Centre</div>
-                    <a href="tel:2043422015" className="text-red-700">(204) 342-2015</a>
+                    <div className="font-medium text-red-800">John Wavey Health Centre</div>
+                    <a href="tel:2043422033" className="text-red-700">(204) 342-2033</a>
                   </div>
-                  <div className="border-t border-red-200 pt-2">
-                    <div className="font-medium text-red-800">Crisis Line</div>
-                    <a href="tel:18004567356" className="text-red-700">1-800-456-7356</a>
-                  </div>
+                 
                 </div>
               </motion.div>
 
@@ -577,6 +588,37 @@ export default function TCNBandOfficePage() {
                 </div>
               </motion.div>
 
+              {/* External Organizations */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.15 }}
+                className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl shadow-sm border border-blue-200 p-4"
+              >
+                <h3 className="font-bold text-blue-900 mb-3">External Organizations</h3>
+                <div className="space-y-3 text-sm max-h-64 overflow-y-auto">
+                  {externalOrganizations.map((org) => (
+                    <div key={org.id} className="border-b border-blue-200 pb-2 last:border-0 last:pb-0">
+                      <div className="font-medium text-blue-800">{org.name}</div>
+                      <div className="text-xs text-blue-600 mb-1">{org.description}</div>
+                      {org.phone && (
+                        <a href={`tel:${org.phone.replace(/[^0-9]/g, '')}`} className="text-blue-700 text-xs block hover:underline">
+                          Ph: {org.phone}
+                        </a>
+                      )}
+                      {org.tollFree && (
+                        <a href={`tel:${org.tollFree.replace(/[^0-9]/g, '')}`} className="text-blue-700 text-xs block hover:underline">
+                          Toll Free: {org.tollFree}
+                        </a>
+                      )}
+                      {org.fax && (
+                        <span className="text-blue-600 text-xs block">Fax: {org.fax}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+
               {/* Stats */}
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
@@ -595,6 +637,12 @@ export default function TCNBandOfficePage() {
                       {departments.reduce((acc, d) => acc + d.staff.length, 0)}
                     </div>
                     <div className="text-xs text-amber-800">Staff Positions</div>
+                  </div>
+                  <div className="border-t border-amber-200 pt-2">
+                    <div className="text-2xl font-bold text-amber-700">
+                      {externalOrganizations.length}
+                    </div>
+                    <div className="text-xs text-amber-800">External Contacts</div>
                   </div>
                 </div>
               </motion.div>

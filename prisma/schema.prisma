@@ -256,6 +256,7 @@ model Council_Member{
   bio         String?
   image_url   String?       // URL to profile photo
   councilId   String?
+  sourceId    String?       @unique  // ID from the master database for sync
   Current_Council Current_Council? @relation(fields: [councilId], references: [id], onDelete: Cascade)
   @@schema("governance")
 }
@@ -274,6 +275,7 @@ enum Portfolios{
   ECONOMIC_DEVELOPMENT
   ENVIRONMENT
   PUBLIC_SAFETY
+  LEADERSHIP
   @@schema("governance")
 }
 
@@ -281,9 +283,8 @@ model Council_History{
   id          String        @id @default(cuid())
   created     DateTime      @default(now())
   updated     DateTime      @default(now()) @updatedAt
-  council_start DateTime  
-  council_end   DateTime
   councilId   String?
   Current_Council Current_Council? @relation(fields: [councilId], references: [id], onDelete: Cascade)
   @@schema("governance")
 }
+
