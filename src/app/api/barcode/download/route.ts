@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { readFile } from 'fs/promises';
-import { join } from 'path';
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,16 +40,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Read the PDF file from barcodes directory (not in public folder)
-    const barcodePath = join(process.cwd(), 'barcodes', `${barcodeNumber}.pdf`);
+    // Read the JPG file from barcodes/jpg directory (not in public folder)
+    // Use dynamic imports to avoid Turbopack static file analysis
+    const { readFile } = await import('fs/promises');
+    const { join } = await import('path');
+    const barcodePath = join(process.cwd(), 'barcodes', 'jpg', `${barcodeNumber}.jpg`);
     
     try {
       const fileBuffer = await readFile(barcodePath);
       
       return new NextResponse(fileBuffer, {
         headers: {
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename="TCN-Barcode-${barcodeNumber}.pdf"`,
+          'Content-Type': 'image/jpeg',
+          'Content-Disposition': `attachment; filename="TCN-Barcode-${barcodeNumber}.jpg"`,
         },
       });
     } catch (fileError) {

@@ -586,11 +586,11 @@ export default function MemberAccount() {
                     {/* Download Button */}
                     <a
                       href={`/api/barcode/download?barcode=${memberData.barcode.barcode}`}
-                      download={`TCN-Barcode-${memberData.barcode.barcode}.pdf`}
+                      download={`TCN-Barcode-${memberData.barcode.barcode}.jpg`}
                       className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-amber-700 text-white rounded-lg hover:bg-amber-800 transition-colors"
                     >
                       <Download className="w-5 h-5" />
-                      <span className="font-medium">Download Barcode PDF</span>
+                      <span className="font-medium">Download Barcode Image</span>
                     </a>
 
                     <p className="text-xs text-stone-500 text-center">

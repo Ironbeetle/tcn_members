@@ -8,14 +8,8 @@
  */
 
 import { NextRequest } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import path from 'path';
 import { validateApiKey, apiSuccess, apiError, logApiAccess } from '@/lib/api-auth';
 import { posterUploadSchema } from '@/lib/bulletin-validation';
-
-// Directory where posters are stored
-const POSTER_DIR = path.join(process.cwd(), 'public', 'bulletinboard');
 
 // Allowed MIME types
 const ALLOWED_TYPES = [
@@ -37,6 +31,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // Use dynamic imports to avoid Turbopack static file analysis
+    const { writeFile, mkdir } = await import('fs/promises');
+    const { existsSync } = await import('fs');
+    const path = await import('path');
+    const POSTER_DIR = path.join(process.cwd(), 'public', 'bulletinboard');
+
     // Ensure poster directory exists
     if (!existsSync(POSTER_DIR)) {
       await mkdir(POSTER_DIR, { recursive: true });
@@ -131,8 +131,11 @@ export async function DELETE(request: NextRequest) {
       return apiError('Either filename or sourceId must be provided', 400);
     }
 
+    // Use dynamic imports to avoid Turbopack static file analysis
     const { unlink } = await import('fs/promises');
-    const { readdirSync } = await import('fs');
+    const { readdirSync, existsSync } = await import('fs');
+    const path = await import('path');
+    const POSTER_DIR = path.join(process.cwd(), 'public', 'bulletinboard');
 
     let fileToDelete: string | undefined;
 
@@ -175,10 +178,13 @@ export async function GET(request: NextRequest) {
     const sourceId = searchParams.get('sourceId');
     const filename = searchParams.get('filename');
 
+    // Use dynamic imports to avoid Turbopack static file analysis
+    const { readdirSync, statSync, existsSync } = await import('fs');
+    const path = await import('path');
+    const POSTER_DIR = path.join(process.cwd(), 'public', 'bulletinboard');
+
     if (!sourceId && !filename) {
       // List all posters
-      const { readdirSync, statSync } = await import('fs');
-      
       if (!existsSync(POSTER_DIR)) {
         return apiSuccess({ posters: [], count: 0 });
       }
@@ -204,7 +210,6 @@ export async function GET(request: NextRequest) {
     if (filename) {
       filePath = path.join(POSTER_DIR, filename);
     } else if (sourceId) {
-      const { readdirSync } = await import('fs');
       const files = readdirSync(POSTER_DIR);
       const match = files.find(f => f.startsWith(sourceId));
       if (match) {
@@ -216,7 +221,6 @@ export async function GET(request: NextRequest) {
       return apiSuccess({ exists: false });
     }
 
-    const { statSync } = await import('fs');
     const stats = statSync(filePath);
 
     return apiSuccess({
