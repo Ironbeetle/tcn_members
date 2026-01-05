@@ -52,8 +52,16 @@ async function processFnmemberSync(item: SyncItem) {
     case 'CREATE':
     case 'UPSERT': {
       const data = fnmemberSyncSchema.parse(item.data);
+      
+      // First, try to find existing member by t_number (more reliable than id for syncing)
+      const existingMember = await prisma.fnmember.findUnique({
+        where: { t_number: data.t_number },
+      });
+      
+      const memberId = existingMember?.id || data.id;
+      
       const member = await prisma.fnmember.upsert({
-        where: { id: data.id },
+        where: { t_number: data.t_number },
         create: {
           id: data.id,
           birthdate: new Date(data.birthdate),
@@ -69,12 +77,95 @@ async function processFnmemberSync(item: SyncItem) {
           birthdate: new Date(data.birthdate),
           first_name: data.first_name,
           last_name: data.last_name,
-          t_number: data.t_number,
           deceased: data.deceased,
           updated: new Date(),
         },
       });
-      return { success: true, data: member };
+      
+      // Process nested Profile if provided (as per VPS_SYNC_REFERENCE.md)
+      const rawData = item.data as any;
+      if (rawData.profile) {
+        const profileData = rawData.profile;
+        await prisma.profile.upsert({
+          where: { id: profileData.id },
+          create: {
+            id: profileData.id,
+            gender: profileData.gender,
+            o_r_status: profileData.o_r_status,
+            community: profileData.community,
+            address: profileData.address,
+            phone_number: profileData.phone_number,
+            email: profileData.email,
+            image_url: profileData.image_url,
+            fnmemberId: member.id,
+            created: profileData.created ? new Date(profileData.created) : new Date(),
+            updated: profileData.updated ? new Date(profileData.updated) : new Date(),
+          },
+          update: {
+            gender: profileData.gender,
+            o_r_status: profileData.o_r_status,
+            community: profileData.community,
+            address: profileData.address,
+            phone_number: profileData.phone_number,
+            email: profileData.email,
+            image_url: profileData.image_url,
+            updated: new Date(),
+          },
+        });
+      }
+      
+      // Process nested Barcode if provided (as per VPS_SYNC_REFERENCE.md)
+      if (rawData.barcode) {
+        const barcodeData = rawData.barcode;
+        await prisma.barcode.upsert({
+          where: { id: barcodeData.id },
+          create: {
+            id: barcodeData.id,
+            barcode: barcodeData.barcode,
+            activated: barcodeData.activated ?? 2, // Default to assigned (2) when syncing
+            fnmemberId: member.id,
+            created: barcodeData.created ? new Date(barcodeData.created) : new Date(),
+            updated: barcodeData.updated ? new Date(barcodeData.updated) : new Date(),
+          },
+          update: {
+            barcode: barcodeData.barcode,
+            activated: barcodeData.activated,
+            fnmemberId: member.id,
+            updated: new Date(),
+          },
+        });
+      }
+      
+      // Process nested Family if provided (as per VPS_SYNC_REFERENCE.md)
+      if (rawData.family) {
+        const familyData = rawData.family;
+        await prisma.family.upsert({
+          where: { id: familyData.id },
+          create: {
+            id: familyData.id,
+            spouse_fname: familyData.spouse_fname,
+            spouse_lname: familyData.spouse_lname,
+            dependents: familyData.dependents ?? 0,
+            fnmemberId: member.id,
+            created: familyData.created ? new Date(familyData.created) : new Date(),
+            updated: familyData.updated ? new Date(familyData.updated) : new Date(),
+          },
+          update: {
+            spouse_fname: familyData.spouse_fname,
+            spouse_lname: familyData.spouse_lname,
+            dependents: familyData.dependents,
+            updated: new Date(),
+          },
+        });
+      }
+      
+      // Return member with relations
+      const fullMember = await prisma.fnmember.findUnique({
+        where: { id: member.id },
+        include: { profile: true, barcode: true, family: true },
+      });
+      
+      return { success: true, data: fullMember };
     }
     
     case 'UPDATE': {
