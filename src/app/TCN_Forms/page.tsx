@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -13,6 +13,7 @@ import {
   checkUserSubmission,
   submitSignupForm,
   getUserSignupSubmissions,
+  getFnmemberById,
 } from '@/lib/actions';
 import { 
   FileText,
@@ -80,7 +81,46 @@ export default function TCNFormsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Form handling
-  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
+
+  // Fetch logged-in user's member data for auto-fill
+  const {
+    data: memberData,
+  } = useQuery({
+    queryKey: ['memberData', session?.user?.id],
+    queryFn: async () => {
+      if (!session?.user?.id) return null;
+      
+      const result = await getFnmemberById(session.user.id);
+      
+      if (!result.success) {
+        return null;
+      }
+      
+      return result.data;
+    },
+    enabled: status === 'authenticated' && !!session?.user?.id,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Helper to get user's contact info from profile
+  const userContactInfo = useMemo(() => {
+    if (!memberData) return null;
+    
+    const profile = Array.isArray(memberData.profile) 
+      ? memberData.profile[0] 
+      : memberData.profile;
+    
+    return {
+      firstName: memberData.first_name || '',
+      lastName: memberData.last_name || '',
+      fullName: `${memberData.first_name || ''} ${memberData.last_name || ''}`.trim(),
+      email: profile?.email || '',
+      phone: profile?.phone_number || '',
+      address: profile?.address || '',
+      community: profile?.community || '',
+    };
+  }, [memberData]);
 
   // TanStack Query for fetching active signup form
   const {
@@ -147,15 +187,73 @@ export default function TCNFormsPage() {
   const activeForm = formData as SignupForm | null;
   const hasSubmitted = submissionStatus?.hasSubmitted || false;
 
-  // Open form modal
+  // Helper function to auto-fill form fields based on field type/id
+  const getAutoFillValue = useCallback((field: SignupFormField): string | undefined => {
+    if (!userContactInfo) return undefined;
+    
+    const fieldIdLower = field.fieldId.toLowerCase();
+    const labelLower = field.label.toLowerCase();
+    
+    // Match by field type first
+    if (field.fieldType === 'EMAIL') {
+      return userContactInfo.email;
+    }
+    if (field.fieldType === 'PHONE') {
+      return userContactInfo.phone;
+    }
+    
+    // Match by fieldId or label for common contact fields
+    if (fieldIdLower.includes('email') || labelLower.includes('email')) {
+      return userContactInfo.email;
+    }
+    if (fieldIdLower.includes('phone') || labelLower.includes('phone')) {
+      return userContactInfo.phone;
+    }
+    if (fieldIdLower.includes('address') || labelLower.includes('address')) {
+      return userContactInfo.address;
+    }
+    if (fieldIdLower.includes('community') || labelLower.includes('community')) {
+      return userContactInfo.community;
+    }
+    // Full name field
+    if (fieldIdLower.includes('fullname') || fieldIdLower.includes('full_name') || 
+        labelLower.includes('full name') || labelLower === 'name') {
+      return userContactInfo.fullName;
+    }
+    // First name field
+    if ((fieldIdLower.includes('firstname') || fieldIdLower.includes('first_name') ||
+        labelLower.includes('first name')) && !fieldIdLower.includes('last')) {
+      return userContactInfo.firstName;
+    }
+    // Last name field
+    if (fieldIdLower.includes('lastname') || fieldIdLower.includes('last_name') ||
+        labelLower.includes('last name')) {
+      return userContactInfo.lastName;
+    }
+    
+    return undefined;
+  }, [userContactInfo]);
+
+  // Open form modal with pre-filled contact info
   const openFormModal = useCallback(() => {
     if (hasSubmitted) {
       toast.info('You have already submitted this form');
       return;
     }
-    reset(); // Reset form values
+    reset(); // Reset form values first
+    
+    // Auto-fill contact fields from user's profile
+    if (activeForm && userContactInfo) {
+      activeForm.fields.forEach((field) => {
+        const autoFillValue = getAutoFillValue(field);
+        if (autoFillValue) {
+          setValue(field.fieldId, autoFillValue);
+        }
+      });
+    }
+    
     setIsModalOpen(true);
-  }, [reset, hasSubmitted]);
+  }, [reset, hasSubmitted, activeForm, userContactInfo, getAutoFillValue, setValue]);
 
   // Close modal
   const closeModal = useCallback(() => {

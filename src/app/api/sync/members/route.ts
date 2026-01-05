@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
       // Check if member already exists by t_number
       const existing = await prisma.fnmember.findUnique({
         where: { t_number: validated.t_number },
+        include: { profile: true, barcode: true, family: true },
       });
 
       if (existing) {
@@ -93,15 +94,97 @@ export async function POST(request: NextRequest) {
             deceased: validated.deceased,
             updated: new Date(),
           },
-          include: {
-            profile: true,
-            barcode: true,
-            family: true,
-          },
+        });
+        
+        // Upsert Profile if provided (as per VPS_SYNC_REFERENCE.md)
+        if (validated.profile) {
+          const existingProfile = existing.profile?.[0];
+          if (existingProfile) {
+            await prisma.profile.update({
+              where: { id: existingProfile.id },
+              data: {
+                gender: validated.profile.gender,
+                o_r_status: validated.profile.o_r_status,
+                community: validated.profile.community,
+                address: validated.profile.address,
+                phone_number: validated.profile.phone_number,
+                email: validated.profile.email,
+                image_url: validated.profile.image_url,
+                updated: new Date(),
+              },
+            });
+          } else {
+            await prisma.profile.create({
+              data: {
+                gender: validated.profile.gender,
+                o_r_status: validated.profile.o_r_status,
+                community: validated.profile.community,
+                address: validated.profile.address,
+                phone_number: validated.profile.phone_number,
+                email: validated.profile.email,
+                image_url: validated.profile.image_url,
+                fnmemberId: member.id,
+              },
+            });
+          }
+        }
+        
+        // Upsert Barcode if provided (as per VPS_SYNC_REFERENCE.md)
+        if (validated.barcode) {
+          const existingBarcode = existing.barcode?.[0];
+          if (existingBarcode) {
+            await prisma.barcode.update({
+              where: { id: existingBarcode.id },
+              data: {
+                barcode: validated.barcode.barcode,
+                activated: validated.barcode.activated ?? 2,
+                updated: new Date(),
+              },
+            });
+          } else {
+            await prisma.barcode.create({
+              data: {
+                barcode: validated.barcode.barcode,
+                activated: validated.barcode.activated ?? 2,
+                fnmemberId: member.id,
+              },
+            });
+          }
+        }
+        
+        // Upsert Family if provided (as per VPS_SYNC_REFERENCE.md)
+        if (validated.family) {
+          const existingFamily = existing.family?.[0];
+          if (existingFamily) {
+            await prisma.family.update({
+              where: { id: existingFamily.id },
+              data: {
+                spouse_fname: validated.family.spouse_fname,
+                spouse_lname: validated.family.spouse_lname,
+                dependents: validated.family.dependents ?? 0,
+                updated: new Date(),
+              },
+            });
+          } else {
+            await prisma.family.create({
+              data: {
+                spouse_fname: validated.family.spouse_fname,
+                spouse_lname: validated.family.spouse_lname,
+                dependents: validated.family.dependents ?? 0,
+                fnmemberId: member.id,
+              },
+            });
+          }
+        }
+        
+        // Return updated member with all relations
+        const fullMember = await prisma.fnmember.findUnique({
+          where: { id: member.id },
+          include: { profile: true, barcode: true, family: true },
         });
 
         logApiAccess(request, 'sync/members:POST:UPSERT', true, { memberId: member.id });
-        return apiSuccess(member, 'Member updated (already existed)');
+        return apiSuccess(fullMember, 'Member updated (already existed)');
       }
 
       // Create new member with optional relations

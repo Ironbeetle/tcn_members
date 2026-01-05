@@ -19,6 +19,34 @@ export const fnmemberSyncSchema = z.object({
   t_number: z.string().min(1),
   activated: activationStatusSchema.optional(),
   deceased: z.string().nullable().optional(),
+  // Nested relations (as per VPS_SYNC_REFERENCE.md - master sends nested data)
+  profile: z.object({
+    id: z.string().cuid(),
+    created: z.string().datetime().or(z.date()).optional(),
+    updated: z.string().datetime().or(z.date()).optional(),
+    gender: z.string().nullable().optional(),
+    o_r_status: z.string(),
+    community: z.string(),
+    address: z.string(),
+    phone_number: z.string(),
+    email: z.string(),
+    image_url: z.string().nullable().optional(),
+  }).optional(),
+  barcode: z.object({
+    id: z.string().cuid(),
+    created: z.string().datetime().or(z.date()).optional(),
+    updated: z.string().datetime().or(z.date()).optional(),
+    barcode: z.string(),
+    activated: z.number().int().default(2),
+  }).optional(),
+  family: z.object({
+    id: z.string().cuid(),
+    created: z.string().datetime().or(z.date()).optional(),
+    updated: z.string().datetime().or(z.date()).optional(),
+    spouse_fname: z.string().nullable().optional(),
+    spouse_lname: z.string().nullable().optional(),
+    dependents: z.number().int().default(0),
+  }).optional(),
 });
 
 // Profile schema for sync
