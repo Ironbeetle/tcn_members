@@ -569,12 +569,12 @@ export default function MemberAccount() {
                 
                 {memberData.barcode ? (
                   <div className="space-y-4">
-                    {/* PDF Viewer */}
+                    {/* Barcode Image */}
                     <div className="bg-white rounded-xl border-2 border-amber-200 overflow-hidden">
-                      <iframe
-                        src={`/api/barcode/image?barcode=${memberData.barcode.barcode}#toolbar=0&navpanes=0&scrollbar=0`}
-                        className="w-full h-64 sm:h-80"
-                        title={`Barcode ${memberData.barcode.barcode}`}
+                      <img
+                        src={`/api/barcode/image?barcode=${memberData.barcode.barcode}`}
+                        className="w-full h-auto object-contain"
+                        alt={`Barcode ${memberData.barcode.barcode}`}
                       />
                     </div>
 
