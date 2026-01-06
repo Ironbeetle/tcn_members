@@ -7,7 +7,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["fnmemberlist", "tcnbulletin", "governance"]
+  schemas  = ["fnmemberlist", "tcnbulletin", "governance", "msgmanager"]
 }
 
 enum ActivationStatus {
@@ -288,3 +288,243 @@ model Council_History{
   @@schema("governance")
 }
 
+// ==================== MSG MANAGER (Communications App) ====================
+
+model comm_User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  password      String
+  first_name    String
+  last_name     String
+  created       DateTime       @default(now())
+  updated       DateTime       @default(now()) @updatedAt
+  department    comm_Department @default(BAND_OFFICE)
+  role          comm_UserRole  @default(STAFF)
+  
+  // Authentication fields
+  pin           String?
+  pinExpiresAt  DateTime?
+  lastLogin     DateTime?
+  loginAttempts Int            @default(0)
+  lockedUntil   DateTime?
+  
+  // Password reset tracking
+  passwordResetRequested DateTime?
+  passwordResetCompleted DateTime?
+
+  emails        comm_EmailLog[]
+  staffemail    comm_StaffEmailLog[]
+  bulletin      comm_BulletinApiLog[]
+  sessions      comm_Session[]
+  smslog        comm_SmsLog[]
+  msgcnc        comm_MsgCnC[]
+  loginLogs     comm_LoginLog[]
+  @@map("User")
+  @@schema("msgmanager")
+}
+
+model comm_LoginLog {
+  id          String    @id @default(cuid())
+  userId      String
+  user        comm_User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loginTime   DateTime  @default(now())
+  department  comm_Department
+  ipAddress   String?
+  userAgent   String?
+  success     Boolean   @default(true)
+  failReason  String?
+  @@map("LoginLog")
+  @@schema("msgmanager")
+}
+
+enum comm_UserRole {
+  STAFF
+  STAFF_ADMIN
+  ADMIN
+  CHIEF_COUNCIL
+  @@map("UserRole")
+  @@schema("msgmanager")
+}
+
+enum comm_Department {
+  BAND_OFFICE
+  J_W_HEALTH_CENTER
+  CSCMEC
+  COUNCIL
+  RECREATION
+  UTILITIES
+  @@map("Department")
+  @@schema("msgmanager")
+}
+
+model comm_Session {
+  id            String   @id @default(cuid())
+  sessionToken  String   @unique
+  userId        String
+  expires       DateTime
+  created       DateTime @default(now())
+  updated       DateTime @default(now()) @updatedAt
+  access_token  String?
+  refresh_token String?
+  user          comm_User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("Session")
+  @@schema("msgmanager")
+}
+
+model comm_SmsLog {
+  id         String   @id @default(cuid())
+  created    DateTime @default(now())
+  updated    DateTime @default(now()) @updatedAt
+  message    String
+  recipients String[]
+  status     String
+  messageIds String[]
+  error      String?
+  userId     String
+  user       comm_User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("SmsLog")
+  @@schema("msgmanager")
+}
+
+model comm_EmailLog {
+  id          String   @id @default(cuid())
+  created     DateTime @default(now())
+  updated     DateTime @default(now()) @updatedAt  
+  subject     String
+  message     String   @db.Text
+  recipients  String[]
+  status      String
+  messageId   String?
+  error       String?  @db.Text
+  attachments Json?
+  userId      String
+  user        comm_User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("EmailLog")
+  @@schema("msgmanager")
+}
+
+model comm_StaffEmailLog {
+  id          String   @id @default(cuid())
+  created     DateTime @default(now())
+  updated     DateTime @updatedAt
+  subject     String
+  message     String
+  recipients  String[]
+  status      String
+  messageId   String?
+  error       String?
+  attachments Json?
+  userId      String
+  user        comm_User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("StaffEmailLog")
+  @@schema("msgmanager")
+}
+
+model comm_BulletinApiLog {
+  id          String     @id @default(cuid())
+  title       String
+  subject     String
+  poster_url  String
+  category    comm_Categories @default(CHIEFNCOUNCIL)
+  userId      String
+  User        comm_User  @relation(fields: [userId], references: [id])
+  created     DateTime   @default(now())
+  updated     DateTime   @default(now()) @updatedAt
+  @@map("BulletinApiLog")
+  @@schema("msgmanager")
+}
+
+model comm_MsgCnC {
+  id          String    @id @default(cuid())
+  title       String
+  content     String
+  priority    String
+  type        String    @default("notice")
+  created     DateTime  @default(now())
+  expiryDate  DateTime?
+  isPublished Boolean   @default(false)
+  userId      String
+  User        comm_User @relation(fields: [userId], references: [id])
+  date        DateTime
+  time        DateTime
+  location    String
+  @@map("MsgCnC")
+  @@schema("msgmanager")
+}
+
+enum comm_Categories {
+  CHIEFNCOUNCIL
+  HEALTH
+  EDUCATION
+  RECREATION
+  EMPLOYMENT
+  PROGRAM_EVENTS
+  ANNOUNCEMENTS
+  @@map("Categories")
+  @@schema("msgmanager")
+}
+
+// Sign-Up Forms for Communications App
+model comm_SignUpForm {
+  id           String    @id @default(cuid())
+  portalFormId String?   @unique
+  title        String
+  description  String?   @db.Text
+  deadline     DateTime?
+  maxEntries   Int?
+  isActive     Boolean   @default(true)
+  createdBy    String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  syncedAt     DateTime?
+  
+  fields      comm_FormField[]
+  submissions comm_FormSubmission[]
+  @@map("SignUpForm")
+  @@schema("msgmanager")
+}
+
+model comm_FormField {
+  id          String    @id @default(cuid())
+  formId      String
+  form        comm_SignUpForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  
+  fieldId     String?
+  label       String
+  fieldType   comm_FieldType
+  options     String?
+  placeholder String?
+  required    Boolean   @default(false)
+  order       Int
+  @@map("FormField")
+  @@schema("msgmanager")
+}
+
+model comm_FormSubmission {
+  id          String    @id @default(cuid())
+  formId      String
+  form        comm_SignUpForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  
+  memberId    Int?
+  name        String
+  email       String?
+  phone       String?
+  responses   Json
+  submittedAt DateTime  @default(now())
+  @@map("FormSubmission")
+  @@schema("msgmanager")
+}
+
+enum comm_FieldType {
+  TEXT
+  TEXTAREA
+  SELECT
+  MULTISELECT
+  CHECKBOX
+  DATE
+  NUMBER
+  EMAIL
+  PHONE
+  @@map("FieldType")
+  @@schema("msgmanager")
+}
