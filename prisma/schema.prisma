@@ -7,7 +7,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["fnmemberlist", "tcnbulletin", "governance", "msgmanager"]
+  schemas  = ["fnmemberlist", "tcnbulletin", "governance", "msgmanager", "barcode"]
 }
 
 enum ActivationStatus {
@@ -59,8 +59,8 @@ model Barcode {
   id         String    @id @default(cuid())
   created    DateTime  @default(now())
   updated    DateTime  @default(now()) @updatedAt
-  barcode    String
-  activated  Int       @default(1)  
+  barcode    String    @unique  // Unique for scanner API lookups
+  activated  Int       @default(1)  // 1=unassigned, 2=assigned/active, 0=deactivated
   fnmemberId String?
   fnmember   fnmember? @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
   
@@ -527,4 +527,115 @@ enum comm_FieldType {
   PHONE
   @@map("FieldType")
   @@schema("msgmanager")
+}
+
+// Bar code scanning api
+
+enum SessionStatus {
+  OPEN
+  CLOSED
+  ABORTED
+  @@schema("barcode")
+}
+
+enum Symbology {
+  CODE128
+  QR
+  EAN13
+  UPC
+  OTHER
+  @@schema("barcode")
+}
+
+enum ReadOutcome {
+  ACCEPTED
+  DISCARDED
+  DUPLICATE
+  @@schema("barcode")
+}
+
+enum LookupStatus {
+  FOUND_ACTIVE
+  FOUND_INACTIVE
+  NOT_FOUND
+  ERROR
+  @@schema("barcode")
+}
+
+model ScanSession {
+  @@schema("barcode")
+  @@map("scan_sessions")
+
+  id         String         @id @default(uuid()) @db.Uuid
+  createdAt  DateTime       @default(now())
+  closedAt   DateTime?
+  status     SessionStatus  @default(OPEN)
+
+  // Optional context
+  name       String?
+  operatorId String?
+  deviceId   String?
+  location   String?
+  metadata   Json?
+
+  reads      ScanRead[]
+
+  @@index([status, createdAt])
+}
+
+model ScanRead {
+  @@schema("barcode")
+  @@map("scan_reads")
+
+  id               String        @id @default(cuid())
+  sessionId        String        @db.Uuid
+  session          ScanSession   @relation(fields: [sessionId], references: [id])
+
+  readAt           DateTime      @default(now())
+  rawValue         String
+  normalizedValue  String
+  symbology        Symbology     @default(CODE128)
+  outcome          ReadOutcome   @default(ACCEPTED)
+
+  // One-to-one children (created subsequently in the flow)
+  lookup           ScanLookup?
+  display          ScanDisplay?
+
+  @@index([sessionId, readAt(sort: Desc)])
+  @@index([normalizedValue])
+}
+
+model ScanLookup {
+  @@schema("barcode")
+  @@map("scan_lookups")
+
+  id           String       @id @default(cuid())
+  readId       String       @unique
+  read         ScanRead     @relation(fields: [readId], references: [id])
+
+  lookedUpAt   DateTime     @default(now())
+  status       LookupStatus
+
+  // Linkage to your member/barcode domain (store identifiers without hard FK if cross-schema)
+  memberId     String?      // fnmember.id (cuid format)
+  barcodeValue String?      // The barcode value that was looked up
+
+  // Snapshot of the lookup payload returned (e.g., subset of member fields)
+  result       Json?
+
+  durationMs   Int?
+}
+
+model ScanDisplay {
+  @@schema("barcode")
+  @@map("scan_displays")
+
+  id           String     @id @default(cuid())
+  readId       String     @unique
+  read         ScanRead   @relation(fields: [readId], references: [id])
+
+  displayedAt  DateTime   @default(now())
+
+  // What was actually shown to the operator (subset of result)
+  shown        Json?
 }
