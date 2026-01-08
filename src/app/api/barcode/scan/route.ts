@@ -94,20 +94,11 @@ export async function POST(request: NextRequest) {
         id: member.id,
         firstName: member.first_name,
         lastName: member.last_name,
-        tNumber: member.t_number,
-        birthdate: member.birthdate,
-        activated: member.activated,
+        email: profile?.email || null,
+        phoneNumber: profile?.phone_number || null,
       };
 
-      profileData = profile ? {
-        gender: profile.gender,
-        community: profile.community,
-        address: profile.address,
-        phoneNumber: profile.phone_number,
-        email: profile.email,
-        imageUrl: profile.image_url,
-        orStatus: profile.o_r_status,
-      } : null;
+      profileData = null; // Simplified - no longer returning full profile
     }
 
     const durationMs = Date.now() - startTime;
@@ -164,11 +155,6 @@ export async function POST(request: NextRequest) {
       success: true,
       data: {
         member: memberData,
-        profile: profileData,
-        barcode: {
-          value: normalizedBarcode,
-          activated: barcodeRecord?.activated,
-        },
         scan: {
           id: scanRead.id,
           sessionId: session.id,
@@ -249,22 +235,8 @@ export async function GET(request: NextRequest) {
           id: member.id,
           firstName: member.first_name,
           lastName: member.last_name,
-          tNumber: member.t_number,
-          birthdate: member.birthdate,
-          activated: member.activated,
-        },
-        profile: profile ? {
-          gender: profile.gender,
-          community: profile.community,
-          address: profile.address,
-          phoneNumber: profile.phone_number,
-          email: profile.email,
-          imageUrl: profile.image_url,
-          orStatus: profile.o_r_status,
-        } : null,
-        barcode: {
-          value: normalizedBarcode,
-          activated: barcodeRecord.activated,
+          email: profile?.email || null,
+          phoneNumber: profile?.phone_number || null,
         },
         scannedAt: new Date().toISOString(),
       }
