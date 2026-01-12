@@ -1,5 +1,3 @@
-// Prisma schema for cPanel member activation backend
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,35 +5,27 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["fnmemberlist", "tcnbulletin", "governance", "msgmanager", "barcode"]
-}
-
-enum ActivationStatus {
-  NONE
-  PENDING
-  ACTIVATED
-  
-  @@schema("fnmemberlist")
+  schemas  = ["barcode", "fnmemberlist", "governance", "msgmanager", "tcnbulletin"]
 }
 
 
 model fnmember {
-  id             String           @id @default(cuid())
-  created        DateTime         @default(now())
-  updated        DateTime         @default(now()) @updatedAt
-  birthdate      DateTime         @db.Date
-  first_name     String
-  last_name      String
-  t_number       String           @unique
-  activated      ActivationStatus @default(NONE)
-  deceased       String?
-  auth           fnauth? 
-  profile        Profile[]
-  barcode        Barcode[]
-  family         Family[]
-  form_submissions form_submission[]
+  id                 String              @id @default(cuid())
+  created            DateTime            @default(now())
+  updated            DateTime            @default(now()) @updatedAt
+  birthdate          DateTime            @db.Date
+  first_name         String
+  last_name          String
+  t_number           String              @unique
+  activated          ActivationStatus    @default(NONE)
+  deceased           String?
+  barcode            Barcode[]
+  family             Family[]
+  profile            Profile[]
+  auth               fnauth?
+  form_submissions   form_submission[]
   signup_submissions signup_submission[]
-  
+
   @@schema("fnmemberlist")
 }
 
@@ -53,7 +43,7 @@ model Profile {
   image_url    String?
   fnmemberId   String?
   fnmember     fnmember? @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
-  
+
   @@schema("fnmemberlist")
 }
 
@@ -79,137 +69,93 @@ model Barcode {
   id         String    @id @default(cuid())
   created    DateTime  @default(now())
   updated    DateTime  @default(now()) @updatedAt
-  barcode    String    @unique  // Unique for scanner API lookups
-  activated  Int       @default(1)  // 1=unassigned, 2=assigned/active, 0=deactivated
+  barcode    String    @unique
+  activated  Int       @default(1)
   fnmemberId String?
   fnmember   fnmember? @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
-  
+
   @@schema("fnmemberlist")
 }
 
 model Family {
-  id            String    @id @default(cuid())
-  created       DateTime  @default(now())
-  updated       DateTime  @default(now()) @updatedAt
-  spouse_fname  String?
-  spouse_lname  String?
-  dependents    Int       @default(0)
-  fnmemberId    String?
-  fnmember      fnmember? @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
-  
+  id           String    @id @default(cuid())
+  created      DateTime  @default(now())
+  updated      DateTime  @default(now()) @updatedAt
+  spouse_fname String?
+  spouse_lname String?
+  dependents   Int       @default(0)
+  fnmemberId   String?
+  fnmember     fnmember? @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
+
   @@schema("fnmemberlist")
 }
 
 model fnauth {
-  id                String     @id @default(cuid())
-  created           DateTime   @default(now())
-  updated           DateTime   @default(now()) @updatedAt
-  username          String     @unique
-  email             String     @unique
-  password          String
-  verified          Boolean    @default(false)
-  
-  // Password reset fields
-  resetToken        String?    @unique
-  resetTokenExpiry  DateTime?
-  pin               String?
-  pinExpiresAt      DateTime?
-  
-  // Security fields
-  lastLogin         DateTime?
-  loginAttempts     Int        @default(0)
-  lockedUntil       DateTime?
-  
-  // Relations
-  fnmemberId        String     @unique
-  fnmember          fnmember   @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
-  
+  id               String    @id @default(cuid())
+  created          DateTime  @default(now())
+  updated          DateTime  @default(now()) @updatedAt
+  username         String    @unique
+  email            String    @unique
+  password         String
+  verified         Boolean   @default(false)
+  resetToken       String?   @unique
+  resetTokenExpiry DateTime?
+  pin              String?
+  pinExpiresAt     DateTime?
+  lastLogin        DateTime?
+  loginAttempts    Int       @default(0)
+  lockedUntil      DateTime?
+  fnmemberId       String    @unique
+  fnmember         fnmember  @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
+
   @@schema("fnmemberlist")
 }
 
 // Communincations 
 
 model bulletin {
-  id            String     @id @default(cuid())
-  created       DateTime   @default(now())
-  updated       DateTime   @default(now()) @updatedAt
-  title         String
-  subject       String
-  poster_url    String
-  category      Categories @default(CHIEFNCOUNCIL)
-  // Fields for sync with messaging app
-  sourceId      String?    @unique  // ID from the messaging app (BulletinApiLog.id)
-  userId        String?              // User ID from messaging app who created it
-  @@schema("tcnbulletin")
-}
+  id         String     @id @default(cuid())
+  created    DateTime   @default(now())
+  updated    DateTime   @default(now()) @updatedAt
+  title      String
+  subject    String
+  poster_url String
+  category   Categories @default(CHIEFNCOUNCIL)
+  sourceId   String?    @unique
+  userId     String?
 
-enum Categories{
-  CHIEFNCOUNCIL
-  HEALTH
-  EDUCATION
-  RECREATION
-  EMPLOYMENT
-  PROGRAM_EVENTS
-  ANNOUNCEMENTS
   @@schema("tcnbulletin")
 }
 
 model fillable_form {
-  id            String           @id @default(cuid())
-  created       DateTime         @default(now())
-  updated       DateTime         @default(now()) @updatedAt
-  title         String
-  description   String?
-  category      FormCategory     @default(GENERAL)
-  pdf_url       String           // Path to the PDF template
-  form_fields   Json             // JSON array of form field definitions
-  is_active     Boolean          @default(true)
-  submissions   form_submission[]
+  id          String            @id @default(cuid())
+  created     DateTime          @default(now())
+  updated     DateTime          @default(now()) @updatedAt
+  title       String
+  description String?
+  category    FormCategory      @default(GENERAL)
+  pdf_url     String
+  form_fields Json
+  is_active   Boolean           @default(true)
+  submissions form_submission[]
 
   @@schema("tcnbulletin")
 }
 
 model form_submission {
-  id            String         @id @default(cuid())
-  created       DateTime       @default(now())
-  updated       DateTime       @default(now()) @updatedAt
-  form_data     Json           // Submitted form field values
-  filled_pdf_url String?       // Path to the generated filled PDF
-  status        SubmissionStatus @default(PENDING)
-  
-  // Relations
-  formId        String
-  form          fillable_form  @relation(fields: [formId], references: [id], onDelete: Cascade)
-  fnmemberId    String
-  fnmember      fnmember       @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
+  id             String           @id @default(cuid())
+  created        DateTime         @default(now())
+  updated        DateTime         @default(now()) @updatedAt
+  form_data      Json
+  filled_pdf_url String?
+  status         SubmissionStatus @default(PENDING)
+  formId         String
+  fnmemberId     String
+  fnmember       fnmember         @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
+  form           fillable_form    @relation(fields: [formId], references: [id], onDelete: Cascade)
 
   @@schema("tcnbulletin")
 }
-
-enum FormCategory {
-  GENERAL
-  HEALTH
-  EDUCATION
-  HOUSING
-  EMPLOYMENT
-  RECREATION
-  SOCIAL_SERVICES
-  CHIEFNCOUNCIL
-  PROGRAM_EVENTS
-  ANNOUNCEMENTS
-  @@schema("tcnbulletin")
-}
-
-enum SubmissionStatus {
-  PENDING
-  SUBMITTED
-  UNDER_REVIEW
-  APPROVED
-  REJECTED
-  @@schema("tcnbulletin")
-}
-
-// ==================== SIGNUP FORMS (Synced from TCN_COMM) ====================
 
 model signup_form {
   id              String           @id @default(cuid())
@@ -235,15 +181,15 @@ model signup_form {
 }
 
 model signup_submission {
-  id            String         @id @default(cuid())
-  created       DateTime       @default(now())
-  updated       DateTime       @default(now()) @updatedAt
-  responses     Json           // Submitted form field values
-  synced_to_tcn Boolean        @default(false)
-  sync_attempts Int            @default(0)
+  id              String      @id @default(cuid())
+  created         DateTime    @default(now())
+  updated         DateTime    @default(now()) @updatedAt
+  responses       Json
+  synced_to_tcn   Boolean     @default(false)
+  sync_attempts   Int         @default(0)
   last_sync_error String?
   status        SubmissionStatus @default(SUBMITTED)
-  
+
   // Relations
   formId        String
   form          signup_form    @relation(fields: [formId], references: [id], onDelete: Cascade)
@@ -278,151 +224,111 @@ model signup_submission_history {
 
 // ==================== Chief & Council ====================
 
-model Current_Council{
-  id          String        @id @default(cuid())
-  created     DateTime      @default(now())
-  updated     DateTime      @default(now()) @updatedAt
-  council_start DateTime  
+model Current_Council {
+  id            String            @id @default(cuid())
+  created       DateTime          @default(now())
+  updated       DateTime          @default(now()) @updatedAt
+  council_start DateTime
   council_end   DateTime
-  members Council_Member[]
-  history Council_History[]
-   // Fields for sync with master database
-  sourceId    String?       @unique  // ID from the master database
+  sourceId      String?           @unique
+  history       Council_History[]
+  members       Council_Member[]
+
   @@schema("governance")
 }
 
-model Council_Member{
-  id          String        @id @default(cuid())
-  created     DateTime      @default(now())
-  updated     DateTime      @default(now()) @updatedAt
-  position    Positions     @default(CHIEF)
-  first_name  String
-  last_name   String
-  portfolios  Portfolios[]  // Array of portfolios (up to 4)
-  email       String
-  phone       String
-  bio         String?
-  image_url   String?       // URL to profile photo
-  councilId   String?
-  sourceId    String?       @unique  // ID from the master database for sync
+model Council_Member {
+  id              String           @id @default(cuid())
+  created         DateTime         @default(now())
+  updated         DateTime         @default(now()) @updatedAt
+  position        Positions        @default(CHIEF)
+  first_name      String
+  last_name       String
+  portfolios      Portfolios[]
+  email           String
+  phone           String
+  bio             String?
+  image_url       String?
+  councilId       String?
+  sourceId        String?          @unique
   Current_Council Current_Council? @relation(fields: [councilId], references: [id], onDelete: Cascade)
+
   @@schema("governance")
 }
 
-enum Positions{
-  CHIEF
-  COUNCILLOR
-  @@schema("governance")
-}
-
-enum Portfolios{
-  TREATY
-  HEALTH
-  EDUCATION
-  HOUSING
-  ECONOMIC_DEVELOPMENT
-  ENVIRONMENT
-  PUBLIC_SAFETY
-  LEADERSHIP
-  @@schema("governance")
-}
-
-model Council_History{
-  id          String        @id @default(cuid())
-  created     DateTime      @default(now())
-  updated     DateTime      @default(now()) @updatedAt
-  councilId   String?
+model Council_History {
+  id              String           @id @default(cuid())
+  created         DateTime         @default(now())
+  updated         DateTime         @default(now()) @updatedAt
+  councilId       String?
   Current_Council Current_Council? @relation(fields: [councilId], references: [id], onDelete: Cascade)
+
   @@schema("governance")
 }
-
-// ==================== MSG MANAGER (Communications App) ====================
 
 model comm_User {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  password      String
-  first_name    String
-  last_name     String
-  created       DateTime       @default(now())
-  updated       DateTime       @default(now()) @updatedAt
-  department    comm_Department @default(BAND_OFFICE)
-  role          comm_UserRole  @default(STAFF)
-  
-  // Authentication fields
-  pin           String?
-  pinExpiresAt  DateTime?
-  lastLogin     DateTime?
-  loginAttempts Int            @default(0)
-  lockedUntil   DateTime?
-  
-  // Password reset tracking
+  id                     String                @id @default(cuid())
+  email                  String                @unique
+  password               String
+  first_name             String
+  last_name              String
+  created                DateTime              @default(now())
+  updated                DateTime              @default(now()) @updatedAt
+  department             comm_Department       @default(BAND_OFFICE)
+  role                   comm_UserRole         @default(STAFF)
+  pin                    String?
+  pinExpiresAt           DateTime?
+  lastLogin              DateTime?
+  loginAttempts          Int                   @default(0)
+  lockedUntil            DateTime?
   passwordResetRequested DateTime?
   passwordResetCompleted DateTime?
+  bulletin               comm_BulletinApiLog[]
+  emails                 comm_EmailLog[]
+  loginLogs              comm_LoginLog[]
+  msgcnc                 comm_MsgCnC[]
+  sessions               comm_Session[]
+  smslog                 comm_SmsLog[]
+  staffemail             comm_StaffEmailLog[]
 
-  emails        comm_EmailLog[]
-  staffemail    comm_StaffEmailLog[]
-  bulletin      comm_BulletinApiLog[]
-  sessions      comm_Session[]
-  smslog        comm_SmsLog[]
-  msgcnc        comm_MsgCnC[]
-  loginLogs     comm_LoginLog[]
   @@map("User")
   @@schema("msgmanager")
 }
 
 model comm_LoginLog {
-  id          String    @id @default(cuid())
-  userId      String
-  user        comm_User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  loginTime   DateTime  @default(now())
-  department  comm_Department
-  ipAddress   String?
-  userAgent   String?
-  success     Boolean   @default(true)
-  failReason  String?
+  id         String          @id @default(cuid())
+  userId     String
+  loginTime  DateTime        @default(now())
+  department comm_Department
+  ipAddress  String?
+  userAgent  String?
+  success    Boolean         @default(true)
+  failReason String?
+  user       comm_User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("LoginLog")
   @@schema("msgmanager")
 }
 
-enum comm_UserRole {
-  STAFF
-  STAFF_ADMIN
-  ADMIN
-  CHIEF_COUNCIL
-  @@map("UserRole")
-  @@schema("msgmanager")
-}
-
-enum comm_Department {
-  BAND_OFFICE
-  J_W_HEALTH_CENTER
-  CSCMEC
-  COUNCIL
-  RECREATION
-  UTILITIES
-  @@map("Department")
-  @@schema("msgmanager")
-}
-
 model comm_Session {
-  id            String   @id @default(cuid())
-  sessionToken  String   @unique
+  id            String    @id @default(cuid())
+  sessionToken  String    @unique
   userId        String
   expires       DateTime
-  created       DateTime @default(now())
-  updated       DateTime @default(now()) @updatedAt
+  created       DateTime  @default(now())
+  updated       DateTime  @default(now()) @updatedAt
   access_token  String?
   refresh_token String?
   user          comm_User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("Session")
   @@schema("msgmanager")
 }
 
 model comm_SmsLog {
-  id         String   @id @default(cuid())
-  created    DateTime @default(now())
-  updated    DateTime @default(now()) @updatedAt
+  id         String    @id @default(cuid())
+  created    DateTime  @default(now())
+  updated    DateTime  @default(now()) @updatedAt
   message    String
   recipients String[]
   status     String
@@ -430,31 +336,15 @@ model comm_SmsLog {
   error      String?
   userId     String
   user       comm_User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("SmsLog")
   @@schema("msgmanager")
 }
 
 model comm_EmailLog {
-  id          String   @id @default(cuid())
-  created     DateTime @default(now())
-  updated     DateTime @default(now()) @updatedAt  
-  subject     String
-  message     String   @db.Text
-  recipients  String[]
-  status      String
-  messageId   String?
-  error       String?  @db.Text
-  attachments Json?
-  userId      String
-  user        comm_User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@map("EmailLog")
-  @@schema("msgmanager")
-}
-
-model comm_StaffEmailLog {
-  id          String   @id @default(cuid())
-  created     DateTime @default(now())
-  updated     DateTime @updatedAt
+  id          String    @id @default(cuid())
+  created     DateTime  @default(now())
+  updated     DateTime  @default(now()) @updatedAt
   subject     String
   message     String
   recipients  String[]
@@ -464,20 +354,40 @@ model comm_StaffEmailLog {
   attachments Json?
   userId      String
   user        comm_User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("EmailLog")
+  @@schema("msgmanager")
+}
+
+model comm_StaffEmailLog {
+  id          String    @id @default(cuid())
+  created     DateTime  @default(now())
+  updated     DateTime  @updatedAt
+  subject     String
+  message     String
+  recipients  String[]
+  status      String
+  messageId   String?
+  error       String?
+  attachments Json?
+  userId      String
+  user        comm_User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("StaffEmailLog")
   @@schema("msgmanager")
 }
 
 model comm_BulletinApiLog {
-  id          String     @id @default(cuid())
-  title       String
-  subject     String
-  poster_url  String
-  category    comm_Categories @default(CHIEFNCOUNCIL)
-  userId      String
-  User        comm_User  @relation(fields: [userId], references: [id])
-  created     DateTime   @default(now())
-  updated     DateTime   @default(now()) @updatedAt
+  id         String          @id @default(cuid())
+  title      String
+  subject    String
+  poster_url String
+  category   comm_Categories @default(CHIEFNCOUNCIL)
+  userId     String
+  created    DateTime        @default(now())
+  updated    DateTime        @default(now()) @updatedAt
+  User       comm_User       @relation(fields: [userId], references: [id])
+
   @@map("BulletinApiLog")
   @@schema("msgmanager")
 }
@@ -492,11 +402,210 @@ model comm_MsgCnC {
   expiryDate  DateTime?
   isPublished Boolean   @default(false)
   userId      String
-  User        comm_User @relation(fields: [userId], references: [id])
   date        DateTime
   time        DateTime
   location    String
+  User        comm_User @relation(fields: [userId], references: [id])
+
   @@map("MsgCnC")
+  @@schema("msgmanager")
+}
+
+model comm_SignUpForm {
+  id           String                @id @default(cuid())
+  portalFormId String?               @unique
+  title        String
+  description  String?
+  deadline     DateTime?
+  maxEntries   Int?
+  isActive     Boolean               @default(true)
+  createdBy    String
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  syncedAt     DateTime?
+  fields       comm_FormField[]
+  submissions  comm_FormSubmission[]
+
+  @@map("SignUpForm")
+  @@schema("msgmanager")
+}
+
+model comm_FormField {
+  id          String          @id @default(cuid())
+  formId      String
+  fieldId     String?
+  label       String
+  fieldType   comm_FieldType
+  options     String?
+  placeholder String?
+  required    Boolean         @default(false)
+  order       Int
+  form        comm_SignUpForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@map("FormField")
+  @@schema("msgmanager")
+}
+
+model comm_FormSubmission {
+  id          String          @id @default(cuid())
+  formId      String
+  memberId    Int?
+  name        String
+  email       String?
+  phone       String?
+  responses   Json
+  submittedAt DateTime        @default(now())
+  form        comm_SignUpForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@map("FormSubmission")
+  @@schema("msgmanager")
+}
+
+model ScanSession {
+  id         String        @id @default(cuid())
+  createdAt  DateTime      @default(now())
+  closedAt   DateTime?
+  status     SessionStatus @default(OPEN)
+  name       String?
+  operatorId String?
+  deviceId   String?
+  location   String?
+  metadata   Json?
+  reads      ScanRead[]
+
+  @@index([status, createdAt])
+  @@map("scan_sessions")
+  @@schema("barcode")
+}
+
+model ScanRead {
+  id              String       @id @default(cuid())
+  sessionId       String
+  readAt          DateTime     @default(now())
+  rawValue        String
+  normalizedValue String
+  symbology       Symbology    @default(CODE128)
+  outcome         ReadOutcome  @default(ACCEPTED)
+  display         ScanDisplay?
+  lookup          ScanLookup?
+  session         ScanSession  @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId, readAt(sort: Desc)])
+  @@index([normalizedValue])
+  @@map("scan_reads")
+  @@schema("barcode")
+}
+
+model ScanLookup {
+  id           String       @id @default(cuid())
+  readId       String       @unique
+  lookedUpAt   DateTime     @default(now())
+  status       LookupStatus
+  memberId     String?
+  barcodeValue String?
+  result       Json?
+  durationMs   Int?
+  read         ScanRead     @relation(fields: [readId], references: [id])
+
+  @@map("scan_lookups")
+  @@schema("barcode")
+}
+
+model ScanDisplay {
+  id          String   @id @default(cuid())
+  readId      String   @unique
+  displayedAt DateTime @default(now())
+  shown       Json?
+  read        ScanRead @relation(fields: [readId], references: [id])
+
+  @@map("scan_displays")
+  @@schema("barcode")
+}
+
+enum ActivationStatus {
+  NONE
+  PENDING
+  ACTIVATED
+
+  @@schema("fnmemberlist")
+}
+
+enum Categories {
+  CHIEFNCOUNCIL
+  HEALTH
+  EDUCATION
+  RECREATION
+  EMPLOYMENT
+  PROGRAM_EVENTS
+  ANNOUNCEMENTS
+
+  @@schema("tcnbulletin")
+}
+
+enum FormCategory {
+  GENERAL
+  HEALTH
+  EDUCATION
+  HOUSING
+  EMPLOYMENT
+  RECREATION
+  SOCIAL_SERVICES
+  CHIEFNCOUNCIL
+  PROGRAM_EVENTS
+  ANNOUNCEMENTS
+
+  @@schema("tcnbulletin")
+}
+
+enum SubmissionStatus {
+  PENDING
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+
+  @@schema("tcnbulletin")
+}
+
+enum Positions {
+  CHIEF
+  COUNCILLOR
+
+  @@schema("governance")
+}
+
+enum Portfolios {
+  TREATY
+  HEALTH
+  EDUCATION
+  HOUSING
+  ECONOMIC_DEVELOPMENT
+  ENVIRONMENT
+  PUBLIC_SAFETY
+  LEADERSHIP
+
+  @@schema("governance")
+}
+
+enum comm_UserRole {
+  STAFF
+  STAFF_ADMIN
+  ADMIN
+  CHIEF_COUNCIL
+
+  @@map("UserRole")
+  @@schema("msgmanager")
+}
+
+enum comm_Department {
+  BAND_OFFICE
+  J_W_HEALTH_CENTER
+  CSCMEC
+  COUNCIL
+  RECREATION
+  UTILITIES
+
+  @@map("Department")
   @@schema("msgmanager")
 }
 
@@ -508,58 +617,8 @@ enum comm_Categories {
   EMPLOYMENT
   PROGRAM_EVENTS
   ANNOUNCEMENTS
+
   @@map("Categories")
-  @@schema("msgmanager")
-}
-
-// Sign-Up Forms for Communications App
-model comm_SignUpForm {
-  id           String    @id @default(cuid())
-  portalFormId String?   @unique
-  title        String
-  description  String?   @db.Text
-  deadline     DateTime?
-  maxEntries   Int?
-  isActive     Boolean   @default(true)
-  createdBy    String
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  syncedAt     DateTime?
-  
-  fields      comm_FormField[]
-  submissions comm_FormSubmission[]
-  @@map("SignUpForm")
-  @@schema("msgmanager")
-}
-
-model comm_FormField {
-  id          String    @id @default(cuid())
-  formId      String
-  form        comm_SignUpForm @relation(fields: [formId], references: [id], onDelete: Cascade)
-  
-  fieldId     String?
-  label       String
-  fieldType   comm_FieldType
-  options     String?
-  placeholder String?
-  required    Boolean   @default(false)
-  order       Int
-  @@map("FormField")
-  @@schema("msgmanager")
-}
-
-model comm_FormSubmission {
-  id          String    @id @default(cuid())
-  formId      String
-  form        comm_SignUpForm @relation(fields: [formId], references: [id], onDelete: Cascade)
-  
-  memberId    Int?
-  name        String
-  email       String?
-  phone       String?
-  responses   Json
-  submittedAt DateTime  @default(now())
-  @@map("FormSubmission")
   @@schema("msgmanager")
 }
 
@@ -573,16 +632,16 @@ enum comm_FieldType {
   NUMBER
   EMAIL
   PHONE
+
   @@map("FieldType")
   @@schema("msgmanager")
 }
-
-// Bar code scanning api
 
 enum SessionStatus {
   OPEN
   CLOSED
   ABORTED
+
   @@schema("barcode")
 }
 
@@ -592,6 +651,7 @@ enum Symbology {
   EAN13
   UPC
   OTHER
+
   @@schema("barcode")
 }
 
@@ -599,6 +659,7 @@ enum ReadOutcome {
   ACCEPTED
   DISCARDED
   DUPLICATE
+
   @@schema("barcode")
 }
 
@@ -608,82 +669,4 @@ enum LookupStatus {
   NOT_FOUND
   ERROR
   @@schema("barcode")
-}
-
-model ScanSession {
-  @@schema("barcode")
-  @@map("scan_sessions")
-
-  id          String    @id @default(cuid())
-  createdAt  DateTime       @default(now())
-  closedAt   DateTime?
-  status     SessionStatus  @default(OPEN)
-
-  // Optional context
-  name       String?
-  operatorId String?
-  deviceId   String?
-  location   String?
-  metadata   Json?
-
-  reads      ScanRead[]
-
-  @@index([status, createdAt])
-}
-
-model ScanRead {
-  @@schema("barcode")
-  @@map("scan_reads")
-
-  id          String    @id @default(cuid())
-  sessionId        String
-  session          ScanSession   @relation(fields: [sessionId], references: [id])
-
-  readAt           DateTime      @default(now())
-  rawValue         String
-  normalizedValue  String
-  symbology        Symbology     @default(CODE128)
-  outcome          ReadOutcome   @default(ACCEPTED)
-
-  // One-to-one children (created subsequently in the flow)
-  lookup           ScanLookup?
-  display          ScanDisplay?
-
-  @@index([sessionId, readAt(sort: Desc)])
-  @@index([normalizedValue])
-}
-
-model ScanLookup {
-  @@schema("barcode")
-  @@map("scan_lookups")
-
-  id          String    @id @default(cuid())
-  readId       String       @unique
-  read         ScanRead     @relation(fields: [readId], references: [id])
-
-  lookedUpAt   DateTime     @default(now())
-  status       LookupStatus
-
-  // Linkage to your member/barcode domain (store identifiers without hard FK if cross-schema)
-  memberId     String?      // fnmember.id (cuid format)
-  barcodeValue String?      // The barcode value that was looked up
-
-  // Snapshot of the lookup payload returned (e.g., subset of member fields)
-  result       Json?
-
-  durationMs   Int?
-}
-
-model ScanDisplay {
-  @@schema("barcode")
-  @@map("scan_displays")
-
-  id          String    @id @default(cuid())
-  readId       String     @unique
-  read         ScanRead   @relation(fields: [readId], references: [id])
-
-  displayedAt  DateTime   @default(now())
-
-  // What was actually shown to the operator (subset of result)
-  shown        Json?
 }
