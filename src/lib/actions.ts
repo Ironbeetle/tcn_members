@@ -1718,8 +1718,14 @@ export async function getUserSignupSubmissions(memberId: string): Promise<Action
             title: true,
             category: true,
             deadline: true,
+            allow_resubmit: true,
+            fields: true,
           }
-        }
+        },
+        history: {
+          orderBy: { created: 'desc' },
+          take: 5, // Last 5 submissions
+        },
       },
       orderBy: { created: 'desc' },
     });
@@ -1727,6 +1733,358 @@ export async function getUserSignupSubmissions(memberId: string): Promise<Action
     return {
       success: true,
       data: submissions,
+    };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+// Get all signup forms grouped by category
+export async function getAllSignupForms(memberId?: string): Promise<ActionResult<any>> {
+  try {
+    const forms = await prisma.signup_form.findMany({
+      where: { is_active: true },
+      include: {
+        _count: { select: { submissions: true } },
+      },
+      orderBy: [
+        { deadline: 'asc' },
+        { created: 'desc' },
+      ],
+    });
+
+    // If memberId provided, also check which forms user has submitted
+    let userSubmissions: string[] = [];
+    if (memberId) {
+      const submissions = await prisma.signup_submission.findMany({
+        where: { fnmemberId: memberId },
+        select: { formId: true },
+      });
+      userSubmissions = submissions.map(s => s.formId);
+    }
+
+    // Group forms by category
+    const formsByCategory = forms.reduce((acc: Record<string, any[]>, form) => {
+      const category = form.category;
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push({
+        ...form,
+        fields: form.fields as SignupFormField[],
+        submissionCount: form._count.submissions,
+        hasUserSubmitted: userSubmissions.includes(form.id),
+      });
+      return acc;
+    }, {});
+
+    // Get unique categories
+    const categories = [...new Set(forms.map(f => f.category))];
+
+    return {
+      success: true,
+      data: {
+        forms: formsByCategory,
+        categories,
+        totalForms: forms.length,
+      },
+    };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+// Get forms by specific category
+export async function getSignupFormsByCategory(
+  category: string, 
+  memberId?: string
+): Promise<ActionResult<any[]>> {
+  try {
+    const forms = await prisma.signup_form.findMany({
+      where: { 
+        is_active: true,
+        category: category as any, 
+      },
+      include: {
+        _count: { select: { submissions: true } },
+      },
+      orderBy: [
+        { deadline: 'asc' },
+        { created: 'desc' },
+      ],
+    });
+
+    // Check user submissions if memberId provided
+    let userSubmissions: string[] = [];
+    if (memberId) {
+      const submissions = await prisma.signup_submission.findMany({
+        where: { fnmemberId: memberId },
+        select: { formId: true },
+      });
+      userSubmissions = submissions.map(s => s.formId);
+    }
+
+    const result = forms.map(form => ({
+      ...form,
+      fields: form.fields as SignupFormField[],
+      submissionCount: form._count.submissions,
+      hasUserSubmitted: userSubmissions.includes(form.id),
+    }));
+
+    return {
+      success: true,
+      data: result,
+    };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+// Get user's submission for a specific form (for editing)
+export async function getUserSubmissionForForm(
+  tcnFormId: string, 
+  memberId: string
+): Promise<ActionResult<any>> {
+  try {
+    const form = await prisma.signup_form.findUnique({
+      where: { tcn_form_id: tcnFormId },
+    });
+
+    if (!form) {
+      return { success: false, error: 'Form not found' };
+    }
+
+    const submission = await prisma.signup_submission.findUnique({
+      where: {
+        formId_fnmemberId: {
+          formId: form.id,
+          fnmemberId: memberId,
+        }
+      },
+      include: {
+        form: true,
+        history: {
+          orderBy: { created: 'desc' },
+        },
+      },
+    });
+
+    if (!submission) {
+      return { success: false, error: 'Submission not found' };
+    }
+
+    return {
+      success: true,
+      data: {
+        ...submission,
+        form: {
+          ...submission.form,
+          fields: submission.form.fields as SignupFormField[],
+        },
+        submissionCount: submission.history.length + 1, // +1 for original
+      },
+    };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+// Update/resubmit a signup form
+export async function resubmitSignupForm(
+  tcnFormId: string,
+  memberId: string,
+  responses: Record<string, any>
+): Promise<ActionResult<{ submissionId: string; cycle: number; webhookSynced: boolean }>> {
+  try {
+    // Get the form
+    const form = await prisma.signup_form.findUnique({
+      where: { tcn_form_id: tcnFormId },
+    });
+
+    if (!form) {
+      return { success: false, error: 'Form not found' };
+    }
+
+    if (!form.allow_resubmit) {
+      return { success: false, error: 'This form does not allow resubmissions' };
+    }
+
+    // Check form is still accepting submissions
+    if (!form.is_active) {
+      return { success: false, error: 'This form is no longer accepting submissions' };
+    }
+
+    if (form.deadline && new Date(form.deadline) < new Date()) {
+      return { success: false, error: 'The deadline for this form has passed' };
+    }
+
+    // Get existing submission
+    const existingSubmission = await prisma.signup_submission.findUnique({
+      where: {
+        formId_fnmemberId: {
+          formId: form.id,
+          fnmemberId: memberId,
+        }
+      },
+      include: {
+        history: {
+          orderBy: { submission_cycle: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!existingSubmission) {
+      return { success: false, error: 'No previous submission found. Please submit the form first.' };
+    }
+
+    // Calculate next cycle number
+    const lastCycle = existingSubmission.history[0]?.submission_cycle || 1;
+    const nextCycle = lastCycle + 1;
+
+    // Archive current responses to history before updating
+    await prisma.signup_submission_history.create({
+      data: {
+        submissionId: existingSubmission.id,
+        responses: existingSubmission.responses ?? {},
+        submission_cycle: lastCycle,
+        synced_to_tcn: existingSubmission.synced_to_tcn,
+        status: existingSubmission.status,
+      },
+    });
+
+    // Update the main submission with new responses
+    const updatedSubmission = await prisma.signup_submission.update({
+      where: { id: existingSubmission.id },
+      data: {
+        responses,
+        updated: new Date(),
+        synced_to_tcn: false,
+        sync_attempts: 0,
+        last_sync_error: null,
+        status: 'SUBMITTED',
+      },
+    });
+
+    // Send webhook to TCN_COMM for the update
+    let webhookSuccess = false;
+    const webhookUrl = process.env.TCN_COMM_WEBHOOK_URL;
+    const webhookApiKey = process.env.TCN_COMM_API_KEY;
+
+    if (webhookUrl && webhookApiKey) {
+      try {
+        const member = await prisma.fnmember.findUnique({
+          where: { id: memberId },
+          include: { profile: true },
+        });
+
+        if (member) {
+          const profile = member.profile?.[0];
+          
+          const webhookResponse = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-API-Key': webhookApiKey,
+            },
+            body: JSON.stringify({
+              formId: form.tcn_form_id,
+              submittedAt: updatedSubmission.updated.toISOString(),
+              isResubmission: true,
+              submissionCycle: nextCycle,
+              submitter: {
+                memberId: member.t_number,
+                name: `${member.first_name} ${member.last_name}`,
+                email: profile?.email || '',
+                phone: profile?.phone_number || '',
+              },
+              responses,
+            }),
+          });
+
+          if (webhookResponse.ok) {
+            webhookSuccess = true;
+            await prisma.signup_submission.update({
+              where: { id: updatedSubmission.id },
+              data: { synced_to_tcn: true },
+            });
+          }
+        }
+      } catch (err: any) {
+        await prisma.signup_submission.update({
+          where: { id: updatedSubmission.id },
+          data: {
+            sync_attempts: 1,
+            last_sync_error: err.message,
+          },
+        });
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        submissionId: updatedSubmission.id,
+        cycle: nextCycle,
+        webhookSynced: webhookSuccess,
+      },
+    };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
+// Get submission history for a specific form
+export async function getSubmissionHistory(
+  tcnFormId: string,
+  memberId: string
+): Promise<ActionResult<any[]>> {
+  try {
+    const form = await prisma.signup_form.findUnique({
+      where: { tcn_form_id: tcnFormId },
+    });
+
+    if (!form) {
+      return { success: false, error: 'Form not found' };
+    }
+
+    const submission = await prisma.signup_submission.findUnique({
+      where: {
+        formId_fnmemberId: {
+          formId: form.id,
+          fnmemberId: memberId,
+        }
+      },
+      include: {
+        history: {
+          orderBy: { created: 'desc' },
+        },
+      },
+    });
+
+    if (!submission) {
+      return { success: true, data: [] };
+    }
+
+    // Include current submission as most recent entry
+    const history = [
+      {
+        id: 'current',
+        created: submission.updated,
+        responses: submission.responses,
+        submission_cycle: (submission.history[0]?.submission_cycle || 0) + 1,
+        status: submission.status,
+        isCurrent: true,
+      },
+      ...submission.history.map(h => ({
+        ...h,
+        isCurrent: false,
+      })),
+    ];
+
+    return {
+      success: true,
+      data: history,
     };
   } catch (error: any) {
     return { success: false, error: handlePrismaError(error) };

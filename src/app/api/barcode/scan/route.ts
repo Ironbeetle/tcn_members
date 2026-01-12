@@ -94,11 +94,15 @@ export async function POST(request: NextRequest) {
         id: member.id,
         firstName: member.first_name,
         lastName: member.last_name,
+        tNumber: member.t_number,
+        activated: member.activated,
         email: profile?.email || null,
         phoneNumber: profile?.phone_number || null,
       };
 
-      profileData = null; // Simplified - no longer returning full profile
+      profileData = profile ? {
+        community: profile.community,
+      } : null;
     }
 
     const durationMs = Date.now() - startTime;

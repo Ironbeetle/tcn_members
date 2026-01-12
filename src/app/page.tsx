@@ -38,42 +38,43 @@ function page() {
           <img src='/regbkg.jpg' className='w-full h-screen object-cover'/>
         </div>
       </div>
-      <div className="w-full h-screen absolute top-0 z-1">
-        <div className="grid grid-cols-1 lg:grid-cols-2 w-full h-full gap-8 p-4 lg:p-8">
-          <div className="flex flex-col justify-center items-center">
-            <div className="techtxtmbb mb-4 lg:mb-6 text-center">
-                TCN Member Portal
-              </div>
-            <div className="flex flex-col justify-start items-center p-1">
-                <motion.img
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  transition={{ duration: 0.5 , delay: 0.3 ,ease: "easeInOut"}}
-                  src="/tcngroup1.png"
-                  alt="Tataskweyak Cree Nation Logo"
-                  className="w-full self-center"
-                  style={{ objectFit: 'cover', height: 'auto' }}
-                />
+     
+      <div className="h-min-screen w-full overflow-scroll flex flex-col justify-center items-center relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 w-full h-screen">
+          <div className="flex flex-col justify-center items-center p-1">
+            <div className="techtxtmbb mb-4 lg:mb-12">
+              Tansi TCN Members
             </div>
+            <img
+              src="/tcngroup1.png"
+              alt="Tataskweyak Cree Nation"
+              className="w-full self-center"
+              style={{ objectFit: 'cover', height: 'auto' }}
+            />
           </div>
+          {/* right side link menu */}
           <div className="flex flex-col justify-center items-center p-4">
-            <div className="w-full max-w-md h-auto">
-              
-              <Link href="/TCN_Enter" className='panelalt h-auto'>
-              <div className="techtxtmb flex flex-col justify-center items-center p-2 h-full">
-                <Image src='/tcnlogosm.png' 
-                  className='object-contain'
-                  width={150}
-                  height={150}
-                  alt='TCN Logo'  
-                />
-                Enter
-              </div>
-            </Link>
+            <div className='w-full lg:w-4/7 mb-12'>
+              <Link href="/TCN_Sys_Intro" className='panelalt'>
+                <div className="techtxtmb flex flex-col justify-center items-center p-2">
+                  TCN Member Portal Intro
+                </div>
+              </Link>
+            </div>
+            
+            <div className='w-full lg:w-4/7'>
+                <div className="techtxtmb flex flex-col justify-center items-center p-2">
+                  <Link href="/TCN_Enter" className='panelalt'>
+                    <div className="techtxtmb flex flex-col justify-center items-center p-2">
+                      Portal
+                    </div>
+                  </Link>
+                </div>
             </div>
           </div>
         </div>
       </div>
+      
     </div>
   )
 }

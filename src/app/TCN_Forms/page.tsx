@@ -8,11 +8,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  getActiveSignupForm,
-  checkUserSubmission,
+  getAllSignupForms,
   submitSignupForm,
   getUserSignupSubmissions,
+  resubmitSignupForm,
+  getSubmissionHistory,
   getFnmemberById,
 } from '@/lib/actions';
 import { 
@@ -28,7 +30,14 @@ import {
   Calendar,
   Users,
   Info,
-  ClipboardCheck
+  ClipboardCheck,
+  FolderOpen,
+  Edit3,
+  History,
+  RefreshCw,
+  ChevronRight,
+  Menu,
+  Filter,
 } from 'lucide-react';
 
 // Field type definitions
@@ -56,20 +65,22 @@ type SignupForm = {
   created: Date;
   updated: Date;
   submissionCount?: number;
+  hasUserSubmitted?: boolean;
+  allow_resubmit?: boolean;
 };
 
-// Category colors for display
-const categoryColors: Record<string, string> = {
-  GENERAL: 'bg-blue-100 text-blue-800',
-  HEALTH: 'bg-green-100 text-green-800',
-  EDUCATION: 'bg-purple-100 text-purple-800',
-  HOUSING: 'bg-orange-100 text-orange-800',
-  EMPLOYMENT: 'bg-teal-100 text-teal-800',
-  RECREATION: 'bg-pink-100 text-pink-800',
-  SOCIAL_SERVICES: 'bg-red-100 text-red-800',
-  CHIEFNCOUNCIL: 'bg-amber-100 text-amber-800',
-  PROGRAM_EVENTS: 'bg-indigo-100 text-indigo-800',
-  ANNOUNCEMENTS: 'bg-yellow-100 text-yellow-800',
+// Category display info
+const categoryInfo: Record<string, { label: string; color: string; bgColor: string; icon: React.ReactNode }> = {
+  GENERAL: { label: 'General', color: 'text-blue-700', bgColor: 'bg-blue-100', icon: <FolderOpen className="w-4 h-4" /> },
+  HEALTH: { label: 'Health', color: 'text-green-700', bgColor: 'bg-green-100', icon: <ClipboardCheck className="w-4 h-4" /> },
+  EDUCATION: { label: 'Education', color: 'text-purple-700', bgColor: 'bg-purple-100', icon: <FileText className="w-4 h-4" /> },
+  HOUSING: { label: 'Housing', color: 'text-orange-700', bgColor: 'bg-orange-100', icon: <Home className="w-4 h-4" /> },
+  EMPLOYMENT: { label: 'Employment', color: 'text-teal-700', bgColor: 'bg-teal-100', icon: <Users className="w-4 h-4" /> },
+  RECREATION: { label: 'Recreation', color: 'text-pink-700', bgColor: 'bg-pink-100', icon: <Calendar className="w-4 h-4" /> },
+  SOCIAL_SERVICES: { label: 'Social Services', color: 'text-red-700', bgColor: 'bg-red-100', icon: <Users className="w-4 h-4" /> },
+  CHIEFNCOUNCIL: { label: 'Chief & Council', color: 'text-amber-700', bgColor: 'bg-amber-100', icon: <ClipboardCheck className="w-4 h-4" /> },
+  PROGRAM_EVENTS: { label: 'Programs & Events', color: 'text-indigo-700', bgColor: 'bg-indigo-100', icon: <Calendar className="w-4 h-4" /> },
+  ANNOUNCEMENTS: { label: 'Announcements', color: 'text-yellow-700', bgColor: 'bg-yellow-100', icon: <Info className="w-4 h-4" /> },
 };
 
 export default function TCNFormsPage() {
@@ -77,8 +88,14 @@ export default function TCNFormsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   
-  // Modal state
+  // UI State
+  const [activeTab, setActiveTab] = useState<'browse' | 'myforms'>('browse');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedForm, setSelectedForm] = useState<SignupForm | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Form handling
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
@@ -100,7 +117,7 @@ export default function TCNFormsPage() {
       return result.data;
     },
     enabled: status === 'authenticated' && !!session?.user?.id,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
   });
 
   // Helper to get user's contact info from profile
@@ -122,169 +139,123 @@ export default function TCNFormsPage() {
     };
   }, [memberData]);
 
-  // TanStack Query for fetching active signup form
+  // Fetch all forms grouped by category
   const {
-    data: formData,
-    isLoading: loadingForm,
-    error: formError,
+    data: allFormsData,
+    isLoading: loadingForms,
   } = useQuery({
-    queryKey: ['activeSignupForm'],
+    queryKey: ['allSignupForms', session?.user?.id],
     queryFn: async () => {
-      const result = await getActiveSignupForm();
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to load form');
-      }
-      
+      const result = await getAllSignupForms(session?.user?.id);
+      if (!result.success) throw new Error(result.error);
       return result.data;
     },
     enabled: status === 'authenticated',
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: false,
-  });
-
-  // Check if user has already submitted
-  const {
-    data: submissionStatus,
-    isLoading: loadingSubmissionStatus,
-  } = useQuery({
-    queryKey: ['signupSubmissionStatus', formData?.tcn_form_id, session?.user?.id],
-    queryFn: async () => {
-      if (!formData?.tcn_form_id || !session?.user?.id) return null;
-      
-      const result = await checkUserSubmission(formData.tcn_form_id, session.user.id);
-      
-      if (!result.success) {
-        return { hasSubmitted: false };
-      }
-      
-      return result.data;
-    },
-    enabled: status === 'authenticated' && !!formData?.tcn_form_id && !!session?.user?.id,
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 1000 * 60 * 5,
   });
 
   // Get user's past submissions
   const {
     data: userSubmissions,
+    isLoading: loadingSubmissions,
   } = useQuery({
     queryKey: ['userSignupSubmissions', session?.user?.id],
     queryFn: async () => {
       if (!session?.user?.id) return [];
-      
       const result = await getUserSignupSubmissions(session.user.id);
-      
-      if (!result.success) {
-        return [];
-      }
-      
+      if (!result.success) return [];
       return result.data || [];
     },
     enabled: status === 'authenticated' && !!session?.user?.id,
     staleTime: 1000 * 60 * 5,
   });
 
-  const activeForm = formData as SignupForm | null;
-  const hasSubmitted = submissionStatus?.hasSubmitted || false;
+  // Fetch submission history when modal is open
+  const {
+    data: submissionHistory,
+    isLoading: loadingHistory,
+  } = useQuery({
+    queryKey: ['submissionHistory', selectedForm?.tcn_form_id, session?.user?.id],
+    queryFn: async () => {
+      if (!selectedForm?.tcn_form_id || !session?.user?.id) return [];
+      const result = await getSubmissionHistory(selectedForm.tcn_form_id, session.user.id);
+      if (!result.success) return [];
+      return result.data || [];
+    },
+    enabled: showHistoryModal && !!selectedForm?.tcn_form_id && !!session?.user?.id,
+  });
 
-  // Helper function to auto-fill form fields based on field type/id
+  // Helper function to auto-fill form fields
   const getAutoFillValue = useCallback((field: SignupFormField): string | undefined => {
     if (!userContactInfo) return undefined;
     
     const fieldIdLower = field.fieldId.toLowerCase();
     const labelLower = field.label.toLowerCase();
     
-    // Match by field type first
-    if (field.fieldType === 'EMAIL') {
-      return userContactInfo.email;
-    }
-    if (field.fieldType === 'PHONE') {
-      return userContactInfo.phone;
-    }
+    if (field.fieldType === 'EMAIL') return userContactInfo.email;
+    if (field.fieldType === 'PHONE') return userContactInfo.phone;
     
-    // Match by fieldId or label for common contact fields
-    if (fieldIdLower.includes('email') || labelLower.includes('email')) {
-      return userContactInfo.email;
-    }
-    if (fieldIdLower.includes('phone') || labelLower.includes('phone')) {
-      return userContactInfo.phone;
-    }
-    if (fieldIdLower.includes('address') || labelLower.includes('address')) {
-      return userContactInfo.address;
-    }
-    if (fieldIdLower.includes('community') || labelLower.includes('community')) {
-      return userContactInfo.community;
-    }
-    // Full name field
-    if (fieldIdLower.includes('fullname') || fieldIdLower.includes('full_name') || 
-        labelLower.includes('full name') || labelLower === 'name') {
-      return userContactInfo.fullName;
-    }
-    // First name field
-    if ((fieldIdLower.includes('firstname') || fieldIdLower.includes('first_name') ||
-        labelLower.includes('first name')) && !fieldIdLower.includes('last')) {
-      return userContactInfo.firstName;
-    }
-    // Last name field
-    if (fieldIdLower.includes('lastname') || fieldIdLower.includes('last_name') ||
-        labelLower.includes('last name')) {
-      return userContactInfo.lastName;
-    }
+    if (fieldIdLower.includes('email') || labelLower.includes('email')) return userContactInfo.email;
+    if (fieldIdLower.includes('phone') || labelLower.includes('phone')) return userContactInfo.phone;
+    if (fieldIdLower.includes('address') || labelLower.includes('address')) return userContactInfo.address;
+    if (fieldIdLower.includes('community') || labelLower.includes('community')) return userContactInfo.community;
+    if (fieldIdLower.includes('fullname') || fieldIdLower.includes('full_name') || labelLower.includes('full name') || labelLower === 'name') return userContactInfo.fullName;
+    if ((fieldIdLower.includes('firstname') || fieldIdLower.includes('first_name') || labelLower.includes('first name')) && !fieldIdLower.includes('last')) return userContactInfo.firstName;
+    if (fieldIdLower.includes('lastname') || fieldIdLower.includes('last_name') || labelLower.includes('last name')) return userContactInfo.lastName;
     
     return undefined;
   }, [userContactInfo]);
 
-  // Open form modal with pre-filled contact info
-  const openFormModal = useCallback(() => {
-    if (hasSubmitted) {
-      toast.info('You have already submitted this form');
-      return;
-    }
-    reset(); // Reset form values first
+  // Open form modal
+  const openFormModal = useCallback((form: SignupForm, editMode: boolean = false, existingResponses?: Record<string, any>) => {
+    setSelectedForm(form);
+    setIsEditMode(editMode);
+    reset();
     
-    // Auto-fill contact fields from user's profile
-    if (activeForm && userContactInfo) {
-      activeForm.fields.forEach((field) => {
+    if (editMode && existingResponses) {
+      // Pre-fill with existing responses
+      Object.entries(existingResponses).forEach(([key, value]) => {
+        setValue(key, value);
+      });
+    } else if (!editMode && userContactInfo) {
+      // Auto-fill contact fields for new submissions
+      form.fields.forEach((field) => {
         const autoFillValue = getAutoFillValue(field);
-        if (autoFillValue) {
-          setValue(field.fieldId, autoFillValue);
-        }
+        if (autoFillValue) setValue(field.fieldId, autoFillValue);
       });
     }
     
     setIsModalOpen(true);
-  }, [reset, hasSubmitted, activeForm, userContactInfo, getAutoFillValue, setValue]);
+  }, [reset, userContactInfo, getAutoFillValue, setValue]);
 
   // Close modal
   const closeModal = useCallback(() => {
     setIsModalOpen(false);
+    setSelectedForm(null);
+    setIsEditMode(false);
     reset();
   }, [reset]);
 
   // Submit form mutation
   const submitMutation = useMutation({
     mutationFn: async (formData: Record<string, any>) => {
-      if (!session?.user?.id || !activeForm) throw new Error('Missing data');
+      if (!session?.user?.id || !selectedForm) throw new Error('Missing data');
       
-      const result = await submitSignupForm(
-        activeForm.tcn_form_id,
-        session.user.id,
-        formData
-      );
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to submit form');
+      if (isEditMode) {
+        const result = await resubmitSignupForm(selectedForm.tcn_form_id, session.user.id, formData);
+        if (!result.success) throw new Error(result.error || 'Failed to resubmit form');
+        return result.data;
+      } else {
+        const result = await submitSignupForm(selectedForm.tcn_form_id, session.user.id, formData);
+        if (!result.success) throw new Error(result.error || 'Failed to submit form');
+        return result.data;
       }
-
-      return result.data;
     },
     onSuccess: () => {
-      toast.success('Registration submitted successfully!');
+      toast.success(isEditMode ? 'Form updated successfully!' : 'Registration submitted successfully!');
       closeModal();
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['signupSubmissionStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['allSignupForms'] });
       queryClient.invalidateQueries({ queryKey: ['userSignupSubmissions'] });
-      queryClient.invalidateQueries({ queryKey: ['activeSignupForm'] });
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to submit form');
@@ -393,7 +364,7 @@ export default function TCNFormsPage() {
           />
         );
       
-      default: // TEXT
+      default:
         return (
           <input
             type="text"
@@ -405,17 +376,14 @@ export default function TCNFormsPage() {
     }
   };
 
-  // Format deadline for display
+  // Format deadline
   const formatDeadline = (deadline: Date | null) => {
     if (!deadline) return null;
     const d = new Date(deadline);
     return d.toLocaleDateString('en-US', { 
-      weekday: 'long',
-      year: 'numeric', 
-      month: 'long', 
+      month: 'short', 
       day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
+      year: 'numeric',
     });
   };
 
@@ -425,9 +393,20 @@ export default function TCNFormsPage() {
     const d = new Date(deadline);
     const now = new Date();
     const diff = d.getTime() - now.getTime();
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    return days;
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
   };
+
+  // Get forms to display based on selected category
+  const displayForms = useMemo(() => {
+    if (!allFormsData?.forms) return [];
+    
+    if (selectedCategory) {
+      return allFormsData.forms[selectedCategory] || [];
+    }
+    
+    // Return all forms flat
+    return Object.values(allFormsData.forms).flat();
+  }, [allFormsData, selectedCategory]);
 
   if (status === "loading") {
     return (
@@ -442,13 +421,11 @@ export default function TCNFormsPage() {
     return null;
   }
 
-  const daysRemaining = activeForm?.deadline ? getDaysRemaining(activeForm.deadline) : null;
-
   return (
     <div className="w-full min-h-screen bg-stone-100">
-      {/* Form Fill Modal */}
+      {/* Form Modal */}
       <AnimatePresence>
-        {isModalOpen && activeForm && (
+        {isModalOpen && selectedForm && (
           <div 
             className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
             onClick={closeModal}
@@ -464,12 +441,17 @@ export default function TCNFormsPage() {
               {/* Modal Header */}
               <div className="flex items-center justify-between p-4 border-b border-stone-200 bg-gradient-to-r from-amber-700 to-amber-900">
                 <div className="flex items-center gap-3">
-                  <FileText className="w-6 h-6 text-white" />
+                  {isEditMode ? <Edit3 className="w-6 h-6 text-white" /> : <FileText className="w-6 h-6 text-white" />}
                   <div>
-                    <h2 className="text-lg font-bold text-white">{activeForm.title}</h2>
-                    {activeForm.created_by && (
-                      <span className="text-xs text-amber-200">by {activeForm.created_by}</span>
-                    )}
+                    <h2 className="text-lg font-bold text-white">{selectedForm.title}</h2>
+                    <div className="flex items-center gap-2">
+                      {selectedForm.created_by && (
+                        <span className="text-xs text-amber-200">by {selectedForm.created_by}</span>
+                      )}
+                      {isEditMode && (
+                        <span className="text-xs bg-white/20 px-2 py-0.5 rounded text-white">Edit Mode</span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <button
@@ -482,12 +464,12 @@ export default function TCNFormsPage() {
 
               {/* Modal Content */}
               <div className="overflow-y-auto max-h-[calc(90vh-140px)] p-6">
-                {activeForm.description && (
-                  <p className="text-stone-600 mb-6">{activeForm.description}</p>
+                {selectedForm.description && (
+                  <p className="text-stone-600 mb-6">{selectedForm.description}</p>
                 )}
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                  {activeForm.fields
+                  {selectedForm.fields
                     .sort((a, b) => a.order - b.order)
                     .map((field) => (
                     <div key={field.fieldId} className="space-y-1">
@@ -519,17 +501,89 @@ export default function TCNFormsPage() {
                       {submitMutation.isPending ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          Submitting...
+                          {isEditMode ? 'Updating...' : 'Submitting...'}
                         </>
                       ) : (
                         <>
                           <Send className="w-4 h-4" />
-                          Submit Registration
+                          {isEditMode ? 'Update Submission' : 'Submit Registration'}
                         </>
                       )}
                     </button>
                   </div>
                 </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* History Modal */}
+      <AnimatePresence>
+        {showHistoryModal && selectedForm && (
+          <div 
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+            onClick={() => setShowHistoryModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.2 }}
+              className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-4 border-b border-stone-200 bg-gradient-to-r from-indigo-700 to-indigo-900">
+                <div className="flex items-center gap-3">
+                  <History className="w-6 h-6 text-white" />
+                  <h2 className="text-lg font-bold text-white">Submission History</h2>
+                </div>
+                <button
+                  onClick={() => setShowHistoryModal(false)}
+                  className="p-2 rounded-full hover:bg-white/20 transition-colors text-white"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto max-h-[calc(80vh-80px)] p-4">
+                {loadingHistory ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                  </div>
+                ) : submissionHistory && submissionHistory.length > 0 ? (
+                  <div className="space-y-3">
+                    {submissionHistory.map((entry: any, index: number) => (
+                      <div 
+                        key={entry.id || index}
+                        className={`p-4 rounded-lg border ${entry.isCurrent ? 'border-indigo-300 bg-indigo-50' : 'border-stone-200 bg-stone-50'}`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`text-sm font-semibold ${entry.isCurrent ? 'text-indigo-700' : 'text-stone-700'}`}>
+                            {entry.isCurrent ? 'Current Submission' : `Submission #${entry.submission_cycle}`}
+                          </span>
+                          <span className="text-xs text-stone-500">
+                            {new Date(entry.created).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="text-xs text-stone-600">
+                          <span className={`px-2 py-0.5 rounded ${
+                            entry.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                            entry.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                            entry.status === 'UNDER_REVIEW' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-blue-100 text-blue-700'
+                          }`}>
+                            {entry.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-stone-500">
+                    No submission history found
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
@@ -542,19 +596,16 @@ export default function TCNFormsPage() {
       </div>
       
       <div className="pt-16 lg:pt-16">
-        {/* Back Button */}
-        <div className="max-w-4xl mx-auto px-4 pt-4">
+        {/* Back Button & Header */}
+        <div className="max-w-7xl mx-auto px-4 pt-4">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-stone-600 hover:text-amber-700 transition-colors mb-2"
+            className="flex items-center gap-2 text-stone-600 hover:text-amber-700 transition-colors mb-4"
           >
             <ArrowLeft className="w-5 h-5" />
             <span className="font-medium">Back</span>
           </button>
-        </div>
 
-        {/* Main Content */}
-        <div className="max-w-4xl mx-auto px-4 py-6">
           {/* Page Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -564,219 +615,359 @@ export default function TCNFormsPage() {
           >
             <div className="flex items-center gap-4 mb-3">
               <ClipboardCheck className="w-8 h-8" />
-              <h1 className="text-2xl font-bold">Community Sign-Up</h1>
+              <h1 className="text-2xl font-bold">Sign-Up Forms & Event Registrations</h1>
             </div>
             <p className="text-amber-50">
-              Register for community programs, events, and services. Sign-up forms are posted here 
-              as they become available and each has its own deadline.
+              Browse available sign-up forms by category or manage your submitted forms.
             </p>
           </motion.div>
+        </div>
 
-          {/* Info Box about how sign-ups work */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6"
-          >
-            <div className="flex gap-3">
-              <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold text-blue-900 mb-1">How Community Sign-Ups Work</h3>
-                <p className="text-sm text-blue-800">
-                  Sign-up forms are posted by community departments for specific programs, events, or services. 
-                  Each form has a deadline after which it will no longer accept registrations. Once you submit 
-                  a form, your registration is sent directly to the organizing department. Check back regularly 
-                  for new sign-up opportunities!
-                </p>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Loading State */}
-          {loadingForm && (
-            <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
-              <p className="text-stone-600">Loading current sign-up form...</p>
-            </div>
-          )}
-
-          {/* No Active Form */}
-          {!loadingForm && !activeForm && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="bg-white rounded-xl shadow-sm border border-stone-200 p-12 text-center"
-            >
-              <Calendar className="w-16 h-16 text-stone-300 mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-stone-800 mb-2">No Active Sign-Up Forms</h2>
-              <p className="text-stone-600 max-w-md mx-auto">
-                There are currently no sign-up forms available. Check back later for upcoming 
-                community programs, events, and services that require registration.
-              </p>
-            </motion.div>
-          )}
-
-          {/* Active Form Card */}
-          {!loadingForm && activeForm && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="bg-white rounded-2xl shadow-lg border border-stone-200 overflow-hidden"
-            >
-              {/* Form Header */}
-              <div className="p-6 border-b border-stone-100">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`px-3 py-1 text-xs font-semibold rounded-full ${categoryColors[activeForm.category] || 'bg-stone-100 text-stone-800'}`}>
-                        {activeForm.category.replace('_', ' ')}
-                      </span>
-                      {activeForm.created_by && (
-                        <span className="text-xs text-stone-500">
-                          by {activeForm.created_by}
-                        </span>
-                      )}
-                    </div>
-                    <h2 className="text-2xl font-bold text-stone-900 mb-2">{activeForm.title}</h2>
-                    {activeForm.description && (
-                      <p className="text-stone-600">{activeForm.description}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Form Meta Info */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-                  {/* Deadline */}
-                  {activeForm.deadline && (
-                    <div className="flex items-center gap-3 bg-stone-50 rounded-lg p-3">
-                      <Clock className={`w-5 h-5 ${daysRemaining && daysRemaining <= 3 ? 'text-red-600' : 'text-amber-600'}`} />
-                      <div>
-                        <p className="text-xs text-stone-500 uppercase tracking-wide">Deadline</p>
-                        <p className="text-sm font-semibold text-stone-800">
-                          {formatDeadline(activeForm.deadline)}
-                        </p>
-                        {daysRemaining !== null && (
-                          <p className={`text-xs ${daysRemaining <= 3 ? 'text-red-600 font-semibold' : 'text-stone-500'}`}>
-                            {daysRemaining <= 0 ? 'Deadline passed' : `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} remaining`}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Entries */}
-                  {activeForm.max_entries && (
-                    <div className="flex items-center gap-3 bg-stone-50 rounded-lg p-3">
-                      <Users className="w-5 h-5 text-amber-600" />
-                      <div>
-                        <p className="text-xs text-stone-500 uppercase tracking-wide">Spots</p>
-                        <p className="text-sm font-semibold text-stone-800">
-                          {activeForm.submissionCount || 0} / {activeForm.max_entries}
-                        </p>
-                        <p className="text-xs text-stone-500">
-                          {activeForm.max_entries - (activeForm.submissionCount || 0)} remaining
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Status */}
-                  <div className="flex items-center gap-3 bg-stone-50 rounded-lg p-3">
-                    {hasSubmitted ? (
-                      <>
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                        <div>
-                          <p className="text-xs text-stone-500 uppercase tracking-wide">Your Status</p>
-                          <p className="text-sm font-semibold text-green-700">Registered</p>
-                          <p className="text-xs text-stone-500">
-                            Submitted {submissionStatus?.submittedAt 
-                              ? new Date(submissionStatus.submittedAt).toLocaleDateString() 
-                              : ''}
-                          </p>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle className="w-5 h-5 text-amber-600" />
-                        <div>
-                          <p className="text-xs text-stone-500 uppercase tracking-wide">Your Status</p>
-                          <p className="text-sm font-semibold text-amber-700">Not Registered</p>
-                          <p className="text-xs text-stone-500">Click below to sign up</p>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <div className="p-6 bg-stone-50">
-                {hasSubmitted ? (
-                  <div className="text-center">
-                    <div className="inline-flex items-center gap-2 px-6 py-3 bg-green-100 text-green-800 rounded-lg">
-                      <CheckCircle className="w-5 h-5" />
-                      <span className="font-semibold">You're Already Registered!</span>
-                    </div>
-                    <p className="text-sm text-stone-500 mt-2">
-                      Your registration has been submitted to the organizing department.
-                    </p>
-                  </div>
-                ) : (
-                  <button
-                    onClick={openFormModal}
-                    disabled={loadingSubmissionStatus}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-amber-700 text-white rounded-xl hover:bg-amber-800 transition-colors font-semibold text-lg disabled:opacity-50"
-                  >
-                    {loadingSubmissionStatus ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Checking status...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="w-5 h-5" />
-                        Sign Up Now
-                      </>
-                    )}
-                  </button>
+        {/* Main Content with Tabs */}
+        <div className="max-w-7xl mx-auto px-4 pb-8">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'browse' | 'myforms')} className="w-full">
+            <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+              <TabsTrigger value="browse" className="flex items-center gap-2">
+                <FolderOpen className="w-4 h-4" />
+                Browse Forms
+              </TabsTrigger>
+              <TabsTrigger value="myforms" className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                My Forms
+                {userSubmissions && userSubmissions.length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 text-xs bg-amber-600 text-white rounded-full">
+                    {userSubmissions.length}
+                  </span>
                 )}
-              </div>
-            </motion.div>
-          )}
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Past Submissions Section */}
-          {userSubmissions && userSubmissions.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className="mt-8"
-            >
-              <h3 className="text-lg font-bold text-stone-800 mb-4">Your Past Registrations</h3>
-              <div className="space-y-3">
-                {userSubmissions.map((submission: any) => (
-                  <div 
-                    key={submission.id}
-                    className="bg-white rounded-xl shadow-sm border border-stone-200 p-4 flex items-center justify-between"
+            {/* Browse Forms Tab */}
+            <TabsContent value="browse">
+              <div className="flex gap-6">
+                {/* Category Sidebar */}
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className={`${sidebarOpen ? 'w-64' : 'w-12'} flex-shrink-0 transition-all duration-300`}
+                >
+                  {/* Mobile toggle */}
+                  <button
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    className="lg:hidden mb-4 p-2 rounded-lg bg-white border border-stone-200 hover:bg-stone-50"
                   >
-                    <div>
-                      <h4 className="font-semibold text-stone-800">{submission.form.title}</h4>
-                      <p className="text-sm text-stone-500">
-                        Submitted {new Date(submission.created).toLocaleDateString()}
+                    {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                  </button>
+
+                  <div className={`bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden ${!sidebarOpen && 'hidden lg:block'}`}>
+                    <div className="p-4 border-b border-stone-100 bg-stone-50">
+                      <div className="flex items-center gap-2 text-stone-700">
+                        <Filter className="w-4 h-4" />
+                        <h3 className="font-semibold text-sm">Categories</h3>
+                      </div>
+                    </div>
+                    <div className="p-2">
+                      {/* All Forms option */}
+                      <button
+                        onClick={() => setSelectedCategory(null)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-colors ${
+                          selectedCategory === null 
+                            ? 'bg-amber-100 text-amber-800 font-medium' 
+                            : 'hover:bg-stone-50 text-stone-700'
+                        }`}
+                      >
+                        <FolderOpen className="w-4 h-4" />
+                        <span>All Forms</span>
+                        {allFormsData?.totalForms && (
+                          <span className="ml-auto text-xs bg-stone-100 px-2 py-0.5 rounded-full">
+                            {allFormsData.totalForms}
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Category list */}
+                      {allFormsData?.categories?.map((category: string) => {
+                        const info = categoryInfo[category] || { label: category, color: 'text-stone-700', bgColor: 'bg-stone-100', icon: <FolderOpen className="w-4 h-4" /> };
+                        const formCount = allFormsData.forms[category]?.length || 0;
+                        
+                        return (
+                          <button
+                            key={category}
+                            onClick={() => setSelectedCategory(category)}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-colors ${
+                              selectedCategory === category 
+                                ? `${info.bgColor} ${info.color} font-medium` 
+                                : 'hover:bg-stone-50 text-stone-700'
+                            }`}
+                          >
+                            {info.icon}
+                            <span>{info.label}</span>
+                            <span className={`ml-auto text-xs ${selectedCategory === category ? 'bg-white/50' : 'bg-stone-100'} px-2 py-0.5 rounded-full`}>
+                              {formCount}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Forms List */}
+                <div className="flex-1">
+                  {loadingForms ? (
+                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-12 text-center">
+                      <Loader2 className="w-12 h-12 animate-spin text-amber-600 mx-auto mb-4" />
+                      <p className="text-stone-600">Loading forms...</p>
+                    </div>
+                  ) : displayForms.length === 0 ? (
+                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-12 text-center">
+                      <Calendar className="w-16 h-16 text-stone-300 mx-auto mb-4" />
+                      <h2 className="text-xl font-bold text-stone-800 mb-2">No Forms Available</h2>
+                      <p className="text-stone-600">
+                        {selectedCategory 
+                          ? `No forms available in this category.` 
+                          : 'There are currently no sign-up forms available.'}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 text-green-600">
-                      <CheckCircle className="w-5 h-5" />
-                      <span className="text-sm font-medium">Registered</span>
+                  ) : (
+                    <div className="grid gap-4">
+                      {displayForms.map((form: SignupForm) => {
+                        const daysRemaining = getDaysRemaining(form.deadline);
+                        const catInfo = categoryInfo[form.category] || { label: form.category, color: 'text-stone-700', bgColor: 'bg-stone-100' };
+                        
+                        return (
+                          <motion.div
+                            key={form.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden hover:shadow-md transition-shadow"
+                          >
+                            <div className="p-5">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${catInfo.bgColor} ${catInfo.color}`}>
+                                      {catInfo.label}
+                                    </span>
+                                    {form.hasUserSubmitted && (
+                                      <span className="flex items-center gap-1 px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
+                                        <CheckCircle className="w-3 h-3" />
+                                        Submitted
+                                      </span>
+                                    )}
+                                    {form.allow_resubmit && (
+                                      <span className="flex items-center gap-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
+                                        <RefreshCw className="w-3 h-3" />
+                                        Recurring
+                                      </span>
+                                    )}
+                                  </div>
+                                  <h3 className="text-lg font-semibold text-stone-900 mb-1">{form.title}</h3>
+                                  {form.description && (
+                                    <p className="text-sm text-stone-600 line-clamp-2">{form.description}</p>
+                                  )}
+                                </div>
+                                
+                                {/* Action Button */}
+                                <div className="flex-shrink-0">
+                                  {form.hasUserSubmitted && !form.allow_resubmit ? (
+                                    <span className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg text-sm font-medium">
+                                      <CheckCircle className="w-4 h-4" />
+                                      Registered
+                                    </span>
+                                  ) : (
+                                    <button
+                                      onClick={() => openFormModal(form, false)}
+                                      className="flex items-center gap-2 px-4 py-2 bg-amber-700 text-white rounded-lg hover:bg-amber-800 transition-colors text-sm font-medium"
+                                    >
+                                      <FileText className="w-4 h-4" />
+                                      {form.hasUserSubmitted && form.allow_resubmit ? 'Resubmit' : 'Sign Up'}
+                                      <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Meta info */}
+                              <div className="flex items-center gap-4 mt-4 pt-4 border-t border-stone-100 text-sm">
+                                {form.deadline && (
+                                  <div className={`flex items-center gap-1.5 ${daysRemaining && daysRemaining <= 3 ? 'text-red-600' : 'text-stone-500'}`}>
+                                    <Clock className="w-4 h-4" />
+                                    <span>
+                                      {formatDeadline(form.deadline)}
+                                      {daysRemaining !== null && daysRemaining > 0 && (
+                                        <span className="ml-1">({daysRemaining}d left)</span>
+                                      )}
+                                    </span>
+                                  </div>
+                                )}
+                                {form.max_entries && (
+                                  <div className="flex items-center gap-1.5 text-stone-500">
+                                    <Users className="w-4 h-4" />
+                                    <span>{form.submissionCount || 0}/{form.max_entries} spots</span>
+                                  </div>
+                                )}
+                                {form.created_by && (
+                                  <div className="flex items-center gap-1.5 text-stone-500">
+                                    <Info className="w-4 h-4" />
+                                    <span>{form.created_by}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* My Forms Tab */}
+            <TabsContent value="myforms">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                {/* Info Box */}
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                  <div className="flex gap-3">
+                    <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h3 className="font-semibold text-blue-900 mb-1">Your Submitted Forms</h3>
+                      <p className="text-sm text-blue-800">
+                        View and manage forms you&apos;ve submitted. Some programs allow you to edit and resubmit your registration for recurring sign-up cycles.
+                      </p>
                     </div>
                   </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
+                </div>
+
+                {loadingSubmissions ? (
+                  <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-12 text-center">
+                    <Loader2 className="w-12 h-12 animate-spin text-amber-600 mx-auto mb-4" />
+                    <p className="text-stone-600">Loading your submissions...</p>
+                  </div>
+                ) : !userSubmissions || userSubmissions.length === 0 ? (
+                  <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-12 text-center">
+                    <FileText className="w-16 h-16 text-stone-300 mx-auto mb-4" />
+                    <h2 className="text-xl font-bold text-stone-800 mb-2">No Forms Submitted</h2>
+                    <p className="text-stone-600 mb-4">
+                      You haven&apos;t submitted any sign-up forms yet. Browse available forms to get started.
+                    </p>
+                    <button
+                      onClick={() => setActiveTab('browse')}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-amber-700 text-white rounded-lg hover:bg-amber-800 transition-colors"
+                    >
+                      <FolderOpen className="w-4 h-4" />
+                      Browse Forms
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {userSubmissions.map((submission: any) => {
+                      const catInfo = categoryInfo[submission.form.category] || { label: submission.form.category, color: 'text-stone-700', bgColor: 'bg-stone-100' };
+                      const canResubmit = submission.form.allow_resubmit;
+                      const historyCount = submission.history?.length || 0;
+                      
+                      return (
+                        <motion.div
+                          key={submission.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden"
+                        >
+                          <div className="p-5">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${catInfo.bgColor} ${catInfo.color}`}>
+                                    {catInfo.label}
+                                  </span>
+                                  <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${
+                                    submission.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                    submission.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                                    submission.status === 'UNDER_REVIEW' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-blue-100 text-blue-700'
+                                  }`}>
+                                    {submission.status || 'SUBMITTED'}
+                                  </span>
+                                  {canResubmit && (
+                                    <span className="flex items-center gap-1 px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full">
+                                      <RefreshCw className="w-3 h-3" />
+                                      Editable
+                                    </span>
+                                  )}
+                                </div>
+                                <h3 className="text-lg font-semibold text-stone-900 mb-1">{submission.form.title}</h3>
+                                <p className="text-sm text-stone-600">
+                                  Submitted on {new Date(submission.created).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                  })}
+                                  {historyCount > 0 && (
+                                    <span className="ml-2 text-stone-400">• {historyCount + 1} submission{historyCount > 0 ? 's' : ''}</span>
+                                  )}
+                                </p>
+                              </div>
+                              
+                              {/* Actions */}
+                              <div className="flex items-center gap-2">
+                                {historyCount > 0 && (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedForm({
+                                        ...submission.form,
+                                        fields: submission.form.fields as SignupFormField[],
+                                      });
+                                      setShowHistoryModal(true);
+                                    }}
+                                    className="flex items-center gap-1 px-3 py-2 text-sm border border-stone-200 text-stone-600 rounded-lg hover:bg-stone-50 transition-colors"
+                                  >
+                                    <History className="w-4 h-4" />
+                                    History
+                                  </button>
+                                )}
+                                {canResubmit && (
+                                  <button
+                                    onClick={() => openFormModal(
+                                      {
+                                        ...submission.form,
+                                        fields: submission.form.fields as SignupFormField[],
+                                      },
+                                      true,
+                                      submission.responses
+                                    )}
+                                    className="flex items-center gap-1 px-3 py-2 text-sm bg-amber-700 text-white rounded-lg hover:bg-amber-800 transition-colors"
+                                  >
+                                    <Edit3 className="w-4 h-4" />
+                                    Edit & Resubmit
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Deadline info if still active */}
+                            {submission.form.deadline && new Date(submission.form.deadline) > new Date() && (
+                              <div className="mt-4 pt-4 border-t border-stone-100">
+                                <div className="flex items-center gap-1.5 text-sm text-stone-500">
+                                  <Clock className="w-4 h-4" />
+                                  <span>Form deadline: {formatDeadline(submission.form.deadline)}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
+              </motion.div>
+            </TabsContent>
+          </Tabs>
 
           {/* Quick Links */}
           <motion.div
@@ -801,13 +992,6 @@ export default function TCNFormsPage() {
               </Link>
             </div>
           </motion.div>
-
-          {/* Error State */}
-          {formError && (
-            <div className="bg-red-50 rounded-xl border border-red-200 p-4 text-center mt-4">
-              <p className="text-red-600">{formError instanceof Error ? formError.message : 'An error occurred'}</p>
-            </div>
-          )}
         </div>
       </div>
     </div>

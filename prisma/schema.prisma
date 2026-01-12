@@ -107,6 +107,8 @@ model fnauth {
   @@schema("fnmemberlist")
 }
 
+// Communincations 
+
 model bulletin {
   id            String     @id @default(cuid())
   created       DateTime   @default(now())
@@ -190,22 +192,25 @@ enum SubmissionStatus {
 // ==================== SIGNUP FORMS (Synced from TCN_COMM) ====================
 
 model signup_form {
-  id            String           @id @default(cuid())
-  created       DateTime         @default(now())
-  updated       DateTime         @default(now()) @updatedAt
-  tcn_form_id   String           @unique  // ID from TCN_COMM (the source)
-  title         String
-  description   String?
-  deadline      DateTime?
-  max_entries   Int?
-  is_active     Boolean          @default(true)
-  category      FormCategory     @default(GENERAL)
-  created_by    String?          // Department name from TCN_COMM
-  fields        Json             // JSON array of field definitions
-  submissions   signup_submission[]
+  id              String           @id @default(cuid())
+  created         DateTime         @default(now())
+  updated         DateTime         @default(now()) @updatedAt
+  tcn_form_id     String           @unique  // ID from TCN_COMM (the source)
+  title           String
+  description     String?
+  deadline        DateTime?
+  max_entries     Int?
+  is_active       Boolean          @default(true)
+  category        FormCategory     @default(GENERAL)
+  created_by      String?          // Department name from TCN_COMM
+  fields          Json             // JSON array of field definitions
+  allow_resubmit  Boolean          @default(false) // Allow members to resubmit (for recurring programs)
+  resubmit_message String?         // Custom message for resubmissions
+  submissions     signup_submission[]
 
   @@index([is_active])
   @@index([deadline])
+  @@index([category])
   @@schema("tcnbulletin")
 }
 
@@ -217,14 +222,37 @@ model signup_submission {
   synced_to_tcn Boolean        @default(false)
   sync_attempts Int            @default(0)
   last_sync_error String?
+  status        SubmissionStatus @default(SUBMITTED)
   
   // Relations
   formId        String
   form          signup_form    @relation(fields: [formId], references: [id], onDelete: Cascade)
   fnmemberId    String
   fnmember      fnmember       @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
+  history       signup_submission_history[]
 
   @@unique([formId, fnmemberId])  // One submission per member per form
+  @@schema("tcnbulletin")
+}
+
+// Track submission history for forms that allow re-submissions (recurring programs)
+model signup_submission_history {
+  id               String           @id @default(cuid())
+  created          DateTime         @default(now())
+  responses        Json             // Snapshot of responses at time of submission
+  submission_cycle Int              @default(1) // Which cycle/round (e.g., 1st time, 2nd time)
+  synced_to_tcn    Boolean          @default(false)
+  sync_attempts    Int              @default(0)
+  last_sync_error  String?
+  status           SubmissionStatus @default(SUBMITTED)
+  notes            String?          // Optional notes for this submission
+  
+  // Relations
+  submissionId     String
+  submission       signup_submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@index([created])
   @@schema("tcnbulletin")
 }
 
