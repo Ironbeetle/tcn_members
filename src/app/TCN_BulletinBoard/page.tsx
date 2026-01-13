@@ -5,8 +5,16 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { UserSessionBar } from '@/components/UserSessionBar';
+import { MobileBottomNav, MobilePageHeader } from '@/components/MobileNav';
 import { motion } from 'framer-motion';
 import { queryBulletins } from '@/lib/actions';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { 
   Megaphone, 
   Users, 
@@ -21,7 +29,8 @@ import {
   X,
   ImageIcon,
   FileText,
-  RefreshCw
+  RefreshCw,
+  ChevronDown
 } from 'lucide-react';
 
 // Categories from schema enum
@@ -90,6 +99,7 @@ export default function page() {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedBulletin, setSelectedBulletin] = useState<Bulletin | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -169,12 +179,12 @@ export default function page() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 border-b border-stone-200 bg-gradient-to-r from-amber-700 to-amber-900">
-              <div className="flex items-center gap-3">
-                <div className={`px-3 py-1 rounded-full text-xs font-semibold bg-white/20 text-white`}>
+            <div className="flex items-center justify-between p-3 sm:p-4 border-b border-stone-200 bg-gradient-to-r from-amber-700 to-amber-900">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold bg-white/20 text-white`}>
                   {categories.find(c => c.value === selectedBulletin.category)?.label}
                 </div>
-                <span className="text-white/80 text-sm">
+                <span className="text-white/80 text-xs sm:text-sm hidden sm:inline">
                   {new Date(selectedBulletin.created).toLocaleDateString('en-US', { 
                     month: 'long', 
                     day: 'numeric', 
@@ -186,32 +196,32 @@ export default function page() {
                 onClick={closeBulletinModal}
                 className="p-2 rounded-full hover:bg-white/20 transition-colors text-white"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
+            <div className="overflow-y-auto max-h-[calc(90vh-60px)] sm:max-h-[calc(90vh-80px)]">
               {/* Bulletin Image */}
               <div className="relative w-full bg-stone-100 flex items-center justify-center">
                 {selectedBulletin.poster_url ? (
                   <img
                     src={selectedBulletin.poster_url}
                     alt={selectedBulletin.title}
-                    className="w-full h-auto object-contain max-h-[70vh]"
+                    className="w-full h-auto object-contain max-h-[60vh] sm:max-h-[70vh]"
                   />
                 ) : (
-                  <div className="w-full h-64 flex flex-col items-center justify-center text-stone-400">
-                    <ImageIcon className="w-16 h-16 mb-2" />
+                  <div className="w-full h-48 sm:h-64 flex flex-col items-center justify-center text-stone-400">
+                    <ImageIcon className="w-12 h-12 sm:w-16 sm:h-16 mb-2" />
                     <span>No image available</span>
                   </div>
                 )}
               </div>
 
               {/* Bulletin Details */}
-              <div className="p-6">
-                <h2 className="text-2xl font-bold text-stone-800 mb-2">{selectedBulletin.title}</h2>
-                <p className="text-stone-600 whitespace-pre-wrap">{selectedBulletin.subject}</p>
+              <div className="p-4 sm:p-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-stone-800 mb-2">{selectedBulletin.title}</h2>
+                <p className="text-sm sm:text-base text-stone-600 whitespace-pre-wrap">{selectedBulletin.subject}</p>
               </div>
             </div>
           </motion.div>
@@ -219,28 +229,83 @@ export default function page() {
       )}
 
       {/* Fixed Top bar */}
-      <div className="fixed top-0 z-100 w-full shadow-md">
+      <div className="fixed top-0 z-50 w-full shadow-md">
         <UserSessionBar showLogo={true} logoSrc="/tcnlogolg.png" />
       </div>
       
-      <div className="pt-16 lg:pt-16">
-        {/* Back Button */}
-        <div className="max-w-7xl mx-auto px-4 pt-4">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-stone-600 hover:text-amber-700 transition-colors mb-2"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Back</span>
-          </button>
-        </div>
-
-        {/* 3-Column Layout */}
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="pt-16 pb-20 lg:pb-6">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+          
+          {/* Mobile Header with Filter */}
+          <div className="lg:hidden mb-4">
+            <MobilePageHeader 
+              title="Bulletin Board"
+              subtitle="Community announcements"
+              icon={<Megaphone className="w-5 h-5" />}
+            />
             
-            {/* LEFT SIDEBAR - Category Filter */}
-            <aside className="lg:col-span-3 space-y-4 overscroll-y-none">
+            {/* Mobile Category Filter Button */}
+            <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+              <SheetTrigger asChild>
+                <button className="w-full flex items-center justify-between p-3 bg-white rounded-xl border border-stone-200 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-amber-700" />
+                    <span className="text-sm font-medium text-stone-700">
+                      {categories.find(c => c.value === selectedCategory)?.label || 'All Posts'}
+                    </span>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-stone-400" />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-[50vh] rounded-t-3xl">
+                <SheetHeader className="text-left pb-4 border-b border-stone-100">
+                  <SheetTitle className="text-lg font-bold text-stone-800">Filter by Category</SheetTitle>
+                </SheetHeader>
+                <div className="py-4 space-y-1 overflow-y-auto">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.value}
+                      onClick={() => {
+                        setSelectedCategory(cat.value);
+                        setFilterSheetOpen(false);
+                      }}
+                      className={`w-full p-3 rounded-xl transition-all text-left flex items-center gap-3 ${
+                        selectedCategory === cat.value
+                          ? 'bg-amber-100 border border-amber-300'
+                          : 'hover:bg-stone-50'
+                      }`}
+                    >
+                      <cat.icon className={`w-5 h-5 ${
+                        selectedCategory === cat.value ? 'text-amber-700' : 'text-stone-500'
+                      }`} />
+                      <span className={`font-medium ${
+                        selectedCategory === cat.value ? 'text-amber-900' : 'text-stone-700'
+                      }`}>
+                        {cat.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          {/* Desktop Back Button */}
+          <div className="hidden lg:block mb-4">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center gap-2 text-stone-600 hover:text-amber-700 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-medium">Back</span>
+            </button>
+          </div>
+
+          {/* Grid Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+            
+            {/* LEFT SIDEBAR - Category Filter (Desktop only) */}
+            <aside className="hidden lg:block lg:col-span-3 space-y-4 overscroll-y-none">
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -279,13 +344,13 @@ export default function page() {
             </aside>
 
             {/* MAIN CONTENT - Bulletin Posts Feed */}
-            <main className="lg:col-span-6 space-y-4 overscroll-y-auto">
-              {/* Page Header */}
+            <main className="lg:col-span-6 space-y-3 sm:space-y-4 overscroll-y-auto">
+              {/* Desktop Page Header */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="bg-gradient-to-r from-amber-700 to-amber-900 rounded-2xl shadow-lg p-6 text-white"
+                className="hidden lg:block bg-gradient-to-r from-amber-700 to-amber-900 rounded-2xl shadow-lg p-6 text-white"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-4">
@@ -390,8 +455,8 @@ export default function page() {
               )}
             </main>
 
-            {/* RIGHT SIDEBAR - User Info & Quick Actions */}
-            <aside className="lg:col-span-3 space-y-4 overscroll-y-none">
+            {/* RIGHT SIDEBAR - User Info & Quick Actions (Desktop only) */}
+            <aside className="hidden lg:block lg:col-span-3 space-y-4 overscroll-y-none">
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -419,6 +484,9 @@ export default function page() {
           </div>
         </div>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 }

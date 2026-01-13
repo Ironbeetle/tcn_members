@@ -1,11 +1,19 @@
 "use client"
 import { useState, useCallback, useMemo } from 'react';
 import { UserSessionBar } from '@/components/UserSessionBar';
+import { MobileBottomNav, MobilePageHeader } from '@/components/MobileNav';
 import { useRouter } from "next/navigation";
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { queryBulletins, getChiefAndCouncil } from '@/lib/actions';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { 
   Users,
   Crown,
@@ -24,7 +32,8 @@ import {
   ChevronUp,
   Calendar,
   ExternalLink,
-  User
+  User,
+  Filter
 } from 'lucide-react';
 
 // Chief and Council type matching database schema
@@ -252,6 +261,7 @@ export default function TCNLocalGovernancePage() {
   const [activeTab, setActiveTab] = useState<'council' | 'bylaws' | 'news'>('council');
   const [selectedBulletin, setSelectedBulletin] = useState<Bulletin | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [tabSheetOpen, setTabSheetOpen] = useState(false);
 
   // TanStack Query for fetching Chief & Council from database
   const {
@@ -391,28 +401,92 @@ export default function TCNLocalGovernancePage() {
       )}
 
       {/* Fixed Top Navigation */}
-      <div className="fixed top-0 z-100 w-full shadow-md">
+      <div className="fixed top-0 z-50 w-full shadow-md">
         <UserSessionBar showLogo={true} logoSrc="/tcnlogolg.png" />
       </div>
 
-      <div className="pt-16 lg:pt-16">
-        {/* Back Button */}
-        <div className="max-w-7xl mx-auto px-4 pt-4">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-stone-600 hover:text-amber-700 transition-colors mb-2"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Back</span>
-          </button>
-        </div>
-
-        {/* 3-Column Layout */}
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="pt-16 pb-20 lg:pb-6">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+          
+          {/* Mobile Header */}
+          <div className="lg:hidden mb-4">
+            <MobilePageHeader 
+              title="Local Governance"
+              subtitle="Chief & Council"
+              icon={<Users className="w-5 h-5" />}
+              gradient="from-blue-700 to-blue-900"
+            />
             
-            {/* LEFT SIDEBAR - Navigation */}
-            <aside className="lg:col-span-3 space-y-4">
+            {/* Mobile Tab Selector */}
+            <Sheet open={tabSheetOpen} onOpenChange={setTabSheetOpen}>
+              <SheetTrigger asChild>
+                <button className="w-full flex items-center justify-between p-3 bg-white rounded-xl border border-stone-200 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    {activeTab === 'council' && <Crown className="w-4 h-4 text-blue-700" />}
+                    {activeTab === 'bylaws' && <Scale className="w-4 h-4 text-blue-700" />}
+                    {activeTab === 'news' && <Megaphone className="w-4 h-4 text-blue-700" />}
+                    <span className="text-sm font-medium text-stone-700">
+                      {activeTab === 'council' && 'Chief & Council'}
+                      {activeTab === 'bylaws' && 'Community By-Laws'}
+                      {activeTab === 'news' && 'News & Announcements'}
+                    </span>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-stone-400" />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-auto rounded-t-3xl">
+                <SheetHeader className="text-left pb-4 border-b border-stone-100">
+                  <SheetTitle className="text-lg font-bold text-stone-800">Sections</SheetTitle>
+                </SheetHeader>
+                <div className="py-4 space-y-1">
+                  <button
+                    onClick={() => { setActiveTab('council'); setTabSheetOpen(false); }}
+                    className={`w-full p-3 rounded-xl text-left transition-colors flex items-center gap-3 ${
+                      activeTab === 'council' ? 'bg-blue-100 text-blue-900' : 'hover:bg-stone-50 text-stone-700'
+                    }`}
+                  >
+                    <Crown className="w-5 h-5" />
+                    <span className="font-medium">Chief & Council</span>
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab('bylaws'); setTabSheetOpen(false); }}
+                    className={`w-full p-3 rounded-xl text-left transition-colors flex items-center gap-3 ${
+                      activeTab === 'bylaws' ? 'bg-blue-100 text-blue-900' : 'hover:bg-stone-50 text-stone-700'
+                    }`}
+                  >
+                    <Scale className="w-5 h-5" />
+                    <span className="font-medium">Community By-Laws</span>
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab('news'); setTabSheetOpen(false); }}
+                    className={`w-full p-3 rounded-xl text-left transition-colors flex items-center gap-3 ${
+                      activeTab === 'news' ? 'bg-blue-100 text-blue-900' : 'hover:bg-stone-50 text-stone-700'
+                    }`}
+                  >
+                    <Megaphone className="w-5 h-5" />
+                    <span className="font-medium">News & Announcements</span>
+                  </button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          {/* Desktop Back Button */}
+          <div className="hidden lg:block mb-4">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center gap-2 text-stone-600 hover:text-amber-700 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-medium">Back</span>
+            </button>
+          </div>
+
+          {/* Grid Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+            
+            {/* LEFT SIDEBAR - Navigation (Desktop only) */}
+            <aside className="hidden lg:block lg:col-span-3 space-y-4">
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -479,13 +553,13 @@ export default function TCNLocalGovernancePage() {
             </aside>
 
             {/* MAIN CONTENT */}
-            <main className="lg:col-span-6 space-y-4">
-              {/* Header */}
+            <main className="lg:col-span-6 space-y-3 sm:space-y-4">
+              {/* Desktop Header */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="bg-gradient-to-r from-blue-700 to-blue-900 rounded-2xl shadow-lg p-6 text-white"
+                className="hidden lg:block bg-gradient-to-r from-blue-700 to-blue-900 rounded-2xl shadow-lg p-6 text-white"
               >
                 <div className="flex items-center gap-4 mb-3">
                   <Users className="w-8 h-8" />
@@ -637,8 +711,8 @@ export default function TCNLocalGovernancePage() {
               )}
             </main>
 
-            {/* RIGHT SIDEBAR - Contact & Info */}
-            <aside className="lg:col-span-3 space-y-4">
+            {/* RIGHT SIDEBAR - Contact & Info (Desktop only) */}
+            <aside className="hidden lg:block lg:col-span-3 space-y-4">
               {/* Next Council Meeting */}
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
@@ -712,6 +786,9 @@ export default function TCNLocalGovernancePage() {
           </div>
         </div>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 }

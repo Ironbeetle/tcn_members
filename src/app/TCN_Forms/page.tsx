@@ -9,6 +9,8 @@ import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { MobileBottomNav, MobilePageHeader } from '@/components/MobileNav';
 import { 
   getAllSignupForms,
   submitSignupForm,
@@ -96,6 +98,7 @@ export default function TCNFormsPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   // Form handling
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
@@ -595,23 +598,32 @@ export default function TCNFormsPage() {
         <UserSessionBar showLogo={true} logoSrc="/tcnlogolg.png" />
       </div>
       
-      <div className="pt-16 lg:pt-16">
-        {/* Back Button & Header */}
+      <div className="pt-16 lg:pt-16 pb-20 lg:pb-8">
+        {/* Mobile Header */}
+        <div className="lg:hidden">
+          <MobilePageHeader 
+            title="Sign-Up Forms" 
+            subtitle="Browse and submit forms"
+            gradient="from-amber-700 to-amber-900"
+          />
+        </div>
+
+        {/* Desktop Back Button & Header */}
         <div className="max-w-7xl mx-auto px-4 pt-4">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-stone-600 hover:text-amber-700 transition-colors mb-4"
+            className="hidden lg:flex items-center gap-2 text-stone-600 hover:text-amber-700 transition-colors mb-4"
           >
             <ArrowLeft className="w-5 h-5" />
             <span className="font-medium">Back</span>
           </button>
 
-          {/* Page Header */}
+          {/* Page Header - Desktop only */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-gradient-to-r from-amber-700 to-amber-900 rounded-2xl shadow-lg p-6 text-white mb-6"
+            className="hidden lg:block bg-gradient-to-r from-amber-700 to-amber-900 rounded-2xl shadow-lg p-6 text-white mb-6"
           >
             <div className="flex items-center gap-4 mb-3">
               <ClipboardCheck className="w-8 h-8" />
@@ -644,22 +656,75 @@ export default function TCNFormsPage() {
 
             {/* Browse Forms Tab */}
             <TabsContent value="browse">
+              {/* Mobile Filter Button */}
+              <div className="lg:hidden mb-4">
+                <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+                  <SheetTrigger asChild>
+                    <button className="flex items-center gap-2 px-4 py-2 bg-white border border-stone-200 rounded-lg text-stone-700 hover:bg-stone-50">
+                      <Filter className="w-4 h-4" />
+                      <span className="text-sm font-medium">
+                        {selectedCategory ? categoryInfo[selectedCategory]?.label || selectedCategory : 'All Categories'}
+                      </span>
+                    </button>
+                  </SheetTrigger>
+                  <SheetContent side="bottom" className="h-[70vh]">
+                    <SheetHeader>
+                      <SheetTitle className="flex items-center gap-2">
+                        <Filter className="w-5 h-5" />
+                        Filter by Category
+                      </SheetTitle>
+                    </SheetHeader>
+                    <div className="py-4 space-y-2">
+                      <button
+                        onClick={() => { setSelectedCategory(null); setFilterSheetOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
+                          selectedCategory === null 
+                            ? 'bg-amber-100 text-amber-800 font-medium' 
+                            : 'hover:bg-stone-50 text-stone-700'
+                        }`}
+                      >
+                        <FolderOpen className="w-5 h-5" />
+                        <span>All Forms</span>
+                        {allFormsData?.totalForms && (
+                          <span className="ml-auto text-sm bg-stone-100 px-2.5 py-1 rounded-full">
+                            {allFormsData.totalForms}
+                          </span>
+                        )}
+                      </button>
+                      {allFormsData?.categories?.map((category: string) => {
+                        const info = categoryInfo[category] || { label: category, color: 'text-stone-700', bgColor: 'bg-stone-100', icon: <FolderOpen className="w-5 h-5" /> };
+                        const formCount = allFormsData.forms[category]?.length || 0;
+                        return (
+                          <button
+                            key={category}
+                            onClick={() => { setSelectedCategory(category); setFilterSheetOpen(false); }}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
+                              selectedCategory === category 
+                                ? `${info.bgColor} ${info.color} font-medium` 
+                                : 'hover:bg-stone-50 text-stone-700'
+                            }`}
+                          >
+                            {info.icon}
+                            <span>{info.label}</span>
+                            <span className={`ml-auto text-sm ${selectedCategory === category ? 'bg-white/50' : 'bg-stone-100'} px-2.5 py-1 rounded-full`}>
+                              {formCount}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
+
               <div className="flex gap-6">
-                {/* Category Sidebar */}
+                {/* Category Sidebar - Desktop Only */}
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3 }}
-                  className={`${sidebarOpen ? 'w-64' : 'w-12'} flex-shrink-0 transition-all duration-300`}
+                  className={`hidden lg:block ${sidebarOpen ? 'w-64' : 'w-12'} flex-shrink-0 transition-all duration-300`}
                 >
-                  {/* Mobile toggle */}
-                  <button
-                    onClick={() => setSidebarOpen(!sidebarOpen)}
-                    className="lg:hidden mb-4 p-2 rounded-lg bg-white border border-stone-200 hover:bg-stone-50"
-                  >
-                    {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                  </button>
-
                   <div className={`bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden ${!sidebarOpen && 'hidden lg:block'}`}>
                     <div className="p-4 border-b border-stone-100 bg-stone-50">
                       <div className="flex items-center gap-2 text-stone-700">
@@ -974,7 +1039,7 @@ export default function TCNFormsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
-            className="mt-8 bg-white rounded-xl shadow-sm border border-stone-200 p-4"
+            className="hidden lg:block mt-8 bg-white rounded-xl shadow-sm border border-stone-200 p-4"
           >
             <h3 className="font-bold text-stone-800 mb-4">Quick Links</h3>
             <div className="grid grid-cols-2 gap-2">
@@ -994,6 +1059,9 @@ export default function TCNFormsPage() {
           </motion.div>
         </div>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 }

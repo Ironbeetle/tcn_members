@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { UserSessionBar } from '@/components/UserSessionBar';
+import { MobileBottomNav, MobilePageHeader } from '@/components/MobileNav';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -263,14 +264,24 @@ export default function MemberAccount() {
         <UserSessionBar showLogo={true} logoSrc="/tcnlogolg.png" />
       </div>
       
-      <div className="pt-16 lg:pt-16">
-        <div className="max-w-5xl mx-auto px-4 py-6">
-          {/* Back Button */}
+      <div className="pt-16 pb-20 lg:pb-6">
+        <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+          
+          {/* Mobile Header */}
+          <div className="lg:hidden mb-4">
+            <MobilePageHeader 
+              title="My Account"
+              subtitle="View & manage your info"
+              icon={<User className="w-5 h-5" />}
+            />
+          </div>
+
+          {/* Desktop Back Button */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3 }}
-            className="mb-4"
+            className="hidden lg:block mb-4"
           >
             <button
               onClick={() => router.back()}
@@ -281,12 +292,12 @@ export default function MemberAccount() {
             </button>
           </motion.div>
 
-          {/* Page Header */}
+          {/* Desktop Page Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-gradient-to-r from-amber-700 to-amber-900 rounded-2xl shadow-lg p-6 text-white mb-6"
+            className="hidden lg:block bg-gradient-to-r from-amber-700 to-amber-900 rounded-2xl shadow-lg p-6 text-white mb-6"
           >
             <div className="flex items-center gap-4">
               <User className="w-8 h-8" />
@@ -295,7 +306,7 @@ export default function MemberAccount() {
             <p className="text-amber-50 mt-2">View and manage your account information</p>
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
             {/* Left Column - Account Info */}
             <div className="lg:col-span-3 space-y-6">
               {/* Profile Image Card */}
@@ -609,6 +620,9 @@ export default function MemberAccount() {
           </div>
         </div>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 }

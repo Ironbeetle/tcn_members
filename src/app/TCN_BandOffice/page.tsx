@@ -1,9 +1,17 @@
 "use client"
 import { UserSessionBar } from '@/components/UserSessionBar';
+import { MobileBottomNav, MobilePageHeader } from '@/components/MobileNav';
 import { useRouter } from "next/navigation";
 import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { 
   Building2,
   Users,
@@ -22,7 +30,9 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
-  User
+  User,
+  Search,
+  Filter
 } from 'lucide-react';
 
 // Department/Program data structure
@@ -400,6 +410,7 @@ export default function TCNBandOfficePage() {
   const { data: session, status } = useSession();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   const filteredDepartments = departments.filter(dept => {
     const matchesSearch = dept.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -427,28 +438,95 @@ export default function TCNBandOfficePage() {
   return (
     <div className="w-full min-h-screen genbkg">
       {/* Fixed Top Navigation */}
-      <div className="fixed top-0 z-100 w-full shadow-md">
+      <div className="fixed top-0 z-50 w-full shadow-md">
         <UserSessionBar showLogo={true} logoSrc="/tcnlogolg.png" />
       </div>
 
-      <div className="pt-16 lg:pt-16">
-        {/* Back Button */}
-        <div className="max-w-7xl mx-auto px-4 pt-4">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-stone-600 hover:text-amber-700 transition-colors mb-2"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Back</span>
-          </button>
-        </div>
-
-        {/* 3-Column Layout */}
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="pt-16 pb-20 lg:pb-6">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+          
+          {/* Mobile Header */}
+          <div className="lg:hidden mb-4">
+            <MobilePageHeader 
+              title="Community Directory"
+              subtitle="Programs & contacts"
+              icon={<Building2 className="w-5 h-5" />}
+            />
             
-            {/* LEFT SIDEBAR - Quick Navigation */}
-            <aside className="lg:col-span-3 space-y-4">
+            {/* Mobile Search */}
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+              <input
+                type="text"
+                placeholder="Search departments, staff..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-white rounded-xl border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+            
+            {/* Mobile Filter Button */}
+            <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+              <SheetTrigger asChild>
+                <button className="w-full flex items-center justify-between p-3 bg-white rounded-xl border border-stone-200 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-amber-700" />
+                    <span className="text-sm font-medium text-stone-700">
+                      {selectedCategory === 'all' ? 'All Departments' : departments.find(d => d.id === selectedCategory)?.name}
+                    </span>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-stone-400" />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-[60vh] rounded-t-3xl">
+                <SheetHeader className="text-left pb-4 border-b border-stone-100">
+                  <SheetTitle className="text-lg font-bold text-stone-800">Departments</SheetTitle>
+                </SheetHeader>
+                <div className="py-4 space-y-1 overflow-y-auto max-h-[calc(60vh-80px)]">
+                  <button
+                    onClick={() => { setSelectedCategory('all'); setFilterSheetOpen(false); }}
+                    className={`w-full p-3 rounded-xl text-left text-sm transition-colors ${
+                      selectedCategory === 'all' ? 'bg-amber-100 text-amber-900 font-medium' : 'hover:bg-stone-50 text-stone-700'
+                    }`}
+                  >
+                    All Departments
+                  </button>
+                  {departments.map((dept) => {
+                    const Icon = dept.icon;
+                    return (
+                      <button
+                        key={dept.id}
+                        onClick={() => { setSelectedCategory(dept.id); setFilterSheetOpen(false); }}
+                        className={`w-full p-3 rounded-xl text-left transition-colors flex items-center gap-3 ${
+                          selectedCategory === dept.id ? 'bg-amber-100 text-amber-900 font-medium' : 'hover:bg-stone-50 text-stone-700'
+                        }`}
+                      >
+                        <Icon className="w-5 h-5" />
+                        <span className="text-sm">{dept.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          {/* Desktop Back Button */}
+          <div className="hidden lg:block mb-4">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center gap-2 text-stone-600 hover:text-amber-700 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-medium">Back</span>
+            </button>
+          </div>
+
+          {/* Grid Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+            
+            {/* LEFT SIDEBAR - Quick Navigation (Desktop only) */}
+            <aside className="hidden lg:block lg:col-span-3 space-y-4">
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -489,13 +567,13 @@ export default function TCNBandOfficePage() {
             </aside>
 
             {/* MAIN CONTENT */}
-            <main className="lg:col-span-6 space-y-4">
-              {/* Header */}
+            <main className="lg:col-span-6 space-y-3 sm:space-y-4">
+              {/* Desktop Header */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="bg-gradient-to-r from-amber-700 to-amber-900 rounded-2xl shadow-lg p-6 text-white"
+                className="hidden lg:block bg-gradient-to-r from-amber-700 to-amber-900 rounded-2xl shadow-lg p-6 text-white"
               >
                 <div className="flex items-center gap-4 mb-3">
                   <Building2 className="w-8 h-8" />
@@ -503,7 +581,7 @@ export default function TCNBandOfficePage() {
                 </div>
                 <p className="text-amber-50">Contact information and personnel for TCN programs and departments.</p>
                 
-                {/* Search Bar */}
+                {/* Desktop Search Bar */}
                 <div className="mt-4">
                   <input
                     type="text"
@@ -516,7 +594,7 @@ export default function TCNBandOfficePage() {
               </motion.div>
 
               {/* Department Cards */}
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {filteredDepartments.length > 0 ? (
                   filteredDepartments.map((dept, index) => (
                     <motion.div
@@ -537,8 +615,8 @@ export default function TCNBandOfficePage() {
               </div>
             </main>
 
-            {/* RIGHT SIDEBAR - Emergency Contacts & Info */}
-            <aside className="lg:col-span-3 space-y-4">
+            {/* RIGHT SIDEBAR - Emergency Contacts & Info (Desktop only) */}
+            <aside className="hidden lg:block lg:col-span-3 space-y-4">
               {/* Emergency Contacts */}
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
@@ -650,6 +728,9 @@ export default function TCNBandOfficePage() {
           </div>
         </div>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 }

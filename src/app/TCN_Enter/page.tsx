@@ -5,8 +5,11 @@ import { motion } from "framer-motion"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Login from "@/components/Login"
 import Register from "@/components/Register"
+import { ArrowLeft } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export default function TCN_Enter() {
+  const router = useRouter()
   const menuItems = [
     { label: "Home", to: "/", color: "stone" as const },
   ]
@@ -38,25 +41,10 @@ export default function TCN_Enter() {
             <DesktopNav />
         </div>
         <div className="w-full h-[10vh] lg:h-[10vh]"/>
-        <section className="w-full relative min-h-screen overflow-scroll">
-            <div className="grid grid-cols-1 lg:grid-cols-2 w-full gap-8 p-4 lg:p-8">
-                {/* <div className="flex flex-col justify-center items-center">
-                    <div className="techtxtmbb mb-4 lg:mb-1">
-                        TCN Member Account Login & Activation
-                    </div>
-                    <div className="flex flex-col justify-start items-center p-1">
-                        <motion.img
-                          initial={{ opacity: 0 }}
-                          whileInView={{ opacity: 1 }}
-                          transition={{ duration: 0.5 , delay: 0.3 ,ease: "easeInOut"}}
-                          src="/tcnfemalecouch.png"
-                          alt="Tataskweyak Cree Nation Logo"
-                          className="w-full self-center"
-                          style={{ objectFit: 'cover', height: 'auto' }}
-                        />
-                    </div>
-                </div> */}
-                <div className="flex flex-col justify-center items-center p-4">
+        <section className="w-full relative min-h-screen overflow-scroll px-4 lg:px-0">
+            <div className="grid grid-cols-1 lg:grid-cols-2 w-full gap-4 lg:gap-8 p-2 lg:p-8">
+                {/* Form section - full width on mobile, order first on mobile */}
+                <div className="flex flex-col justify-center items-center p-2 lg:p-4 order-1 lg:order-1">
                     <div className="w-full max-w-md">
                         <Tabs defaultValue="login" className="w-full">
                             <TabsList className="grid w-full grid-cols-2">
@@ -72,7 +60,8 @@ export default function TCN_Enter() {
                         </Tabs>
                     </div>
                 </div>
-                <div className="flex flex-col justify-center items-center">
+                {/* Image section - hidden on mobile, shown on desktop */}
+                <div className="hidden lg:flex flex-col justify-center items-center order-2">
                     <div className="techtxtmbb mb-4 lg:mb-1">
                         TCN Member Account Login & Activation
                     </div>
