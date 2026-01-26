@@ -18,6 +18,7 @@ enum ActivationStatus {
   @@schema("fnmemberlist")
 }
 
+
 model fnmember {
   id             String           @id @default(cuid())
   created        DateTime         @default(now())
@@ -47,11 +48,30 @@ model Profile {
   community    String
   address      String
   phone_number String
+  province     ProvinceTerritory @default(MB)
   email        String
   image_url    String?
   fnmemberId   String?
   fnmember     fnmember? @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
   
+  @@schema("fnmemberlist")
+}
+
+
+enum ProvinceTerritory{
+  AB
+  BC
+  MB
+  NB
+  NL
+  NS
+  NT
+  NU
+  ON
+  PE
+  QC
+  SK
+  YT
   @@schema("fnmemberlist")
 }
 
@@ -616,7 +636,7 @@ model ScanRead {
   @@map("scan_reads")
 
   id          String    @id @default(cuid())
-  sessionId        String        @db.Uuid
+  sessionId        String
   session          ScanSession   @relation(fields: [sessionId], references: [id])
 
   readAt           DateTime      @default(now())
