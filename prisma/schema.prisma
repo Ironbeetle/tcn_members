@@ -670,3 +670,6 @@ enum LookupStatus {
   ERROR
   @@schema("barcode")
 }
+
+
+
