@@ -46,6 +46,7 @@ type MemberData = {
     email: string;
     phone_number: string;
     address: string;
+    province: string;
     community: string;
     o_r_status: string;
     gender: string | null;
@@ -404,11 +405,17 @@ export default function MemberAccount() {
                     <div>
                       <p className="text-sm text-stone-500">Date of Birth</p>
                       <p className="font-semibold text-stone-800">
-                        {new Date(memberData.birthdate).toLocaleDateString('en-US', { 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        })}
+                        {(() => {
+                          const dateStr = memberData.birthdate;
+                          // Handle ISO string from Prisma - use UTC values to avoid timezone shift
+                          const date = new Date(dateStr);
+                          return date.toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric',
+                            timeZone: 'UTC'
+                          });
+                        })()}
                       </p>
                     </div>
                   </div>
@@ -421,13 +428,6 @@ export default function MemberAccount() {
                       </div>
                     </div>
                   )}
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-amber-700 mt-1" />
-                    <div>
-                      <p className="text-sm text-stone-500">Community</p>
-                      <p className="font-semibold text-stone-800">{memberData.profile?.community || 'N/A'}</p>
-                    </div>
-                  </div>
                   <div className="flex items-start gap-3">
                     <User className="w-5 h-5 text-amber-700 mt-1" />
                     <div>
@@ -489,7 +489,9 @@ export default function MemberAccount() {
                       <MapPin className="w-5 h-5 text-amber-700 mt-1" />
                       <div>
                         <p className="text-sm text-stone-500">Address</p>
-                        <p className="font-semibold text-stone-800">{memberData.profile?.address || 'N/A'}</p>
+                        <p className="font-semibold text-stone-800">
+                          {memberData.profile?.address || 'N/A'}{memberData.profile?.community ? `, ${memberData.profile.community}` : ''}{memberData.profile?.province ? `, ${memberData.profile.province}` : ''}
+                        </p>
                       </div>
                     </div>
                   </div>

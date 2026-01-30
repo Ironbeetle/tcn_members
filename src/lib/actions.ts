@@ -2090,3 +2090,201 @@ export async function getSubmissionHistory(
     return { success: false, error: handlePrismaError(error) };
   }
 }
+
+// ==================== MEMBER VERIFICATION ACTIONS ====================
+
+// In-memory storage for verification attempts (in production, use Redis or database)
+const verificationAttempts = new Map<string, { count: number; lockedUntil: Date | null }>();
+
+const MAX_VERIFICATION_ATTEMPTS = 4;
+const LOCKOUT_DURATION_HOURS = 24;
+
+function getAttemptKey(tNumber: string): string {
+  // Normalize treaty number for consistent tracking
+  return tNumber.toUpperCase().replace(/^T/i, '');
+}
+
+function checkVerificationLockout(tNumber: string): { isLocked: boolean; message?: string } {
+  const key = getAttemptKey(tNumber);
+  const attempt = verificationAttempts.get(key);
+  
+  if (!attempt) return { isLocked: false };
+  
+  if (attempt.lockedUntil && new Date() < attempt.lockedUntil) {
+    const hoursRemaining = Math.ceil((attempt.lockedUntil.getTime() - Date.now()) / (1000 * 60 * 60));
+    return { 
+      isLocked: true, 
+      message: `This treaty number has been locked due to too many failed verification attempts. Please contact the system administrator or try again in ${hoursRemaining} hour(s).` 
+    };
+  }
+  
+  // Reset if lockout has expired
+  if (attempt.lockedUntil && new Date() >= attempt.lockedUntil) {
+    verificationAttempts.delete(key);
+  }
+  
+  return { isLocked: false };
+}
+
+function recordVerificationAttempt(tNumber: string, success: boolean): { attemptsRemaining: number; isLocked: boolean } {
+  const key = getAttemptKey(tNumber);
+  
+  if (success) {
+    // Clear attempts on successful verification
+    verificationAttempts.delete(key);
+    return { attemptsRemaining: MAX_VERIFICATION_ATTEMPTS, isLocked: false };
+  }
+  
+  const attempt = verificationAttempts.get(key) || { count: 0, lockedUntil: null };
+  attempt.count += 1;
+  
+  if (attempt.count >= MAX_VERIFICATION_ATTEMPTS) {
+    // Lock the treaty number
+    attempt.lockedUntil = new Date(Date.now() + LOCKOUT_DURATION_HOURS * 60 * 60 * 1000);
+    verificationAttempts.set(key, attempt);
+    return { attemptsRemaining: 0, isLocked: true };
+  }
+  
+  verificationAttempts.set(key, attempt);
+  return { attemptsRemaining: MAX_VERIFICATION_ATTEMPTS - attempt.count, isLocked: false };
+}
+
+export type VerifyMemberResult = {
+  success: boolean;
+  verified?: boolean;
+  member?: {
+    firstName: string;
+    lastName: string;
+    tNumber: string;
+  };
+  error?: string;
+  attemptsRemaining?: number;
+  isLocked?: boolean;
+};
+
+export async function verifyMemberIdentity(
+  tNumber: string,
+  birthdate: string
+): Promise<VerifyMemberResult> {
+  try {
+    // Normalize treaty number (remove leading T if present)
+    const normalizedTNumber = tNumber.toUpperCase().replace(/^T/i, '');
+    const tNumberWithPrefix = `T${normalizedTNumber}`;
+    
+    // Check if this treaty number is locked
+    const lockoutStatus = checkVerificationLockout(tNumber);
+    if (lockoutStatus.isLocked) {
+      return {
+        success: false,
+        error: lockoutStatus.message,
+        isLocked: true,
+        attemptsRemaining: 0
+      };
+    }
+
+    // Find member by treaty number (try both formats)
+    const member = await prisma.fnmember.findFirst({
+      where: {
+        OR: [
+          { t_number: normalizedTNumber },
+          { t_number: tNumberWithPrefix },
+          { t_number: tNumber }
+        ]
+      },
+      select: {
+        id: true,
+        t_number: true,
+        birthdate: true,
+        first_name: true,
+        last_name: true,
+        activated: true,
+        auth: true
+      }
+    });
+
+    if (!member) {
+      // Record failed attempt
+      const attemptResult = recordVerificationAttempt(tNumber, false);
+      
+      if (attemptResult.isLocked) {
+        return {
+          success: false,
+          error: "Too many failed attempts. This treaty number has been locked. Please contact the system administrator.",
+          isLocked: true,
+          attemptsRemaining: 0
+        };
+      }
+      
+      return {
+        success: false,
+        error: "Treaty number not found in our records.",
+        attemptsRemaining: attemptResult.attemptsRemaining
+      };
+    }
+
+    // Parse and compare birthdates
+    const memberBirthdate = new Date(member.birthdate);
+    const providedBirthdate = new Date(birthdate);
+    
+    // Compare dates (year, month, day only)
+    const birthdateMatches = 
+      memberBirthdate.getFullYear() === providedBirthdate.getFullYear() &&
+      memberBirthdate.getMonth() === providedBirthdate.getMonth() &&
+      memberBirthdate.getDate() === providedBirthdate.getDate();
+
+    if (!birthdateMatches) {
+      // Record failed attempt
+      const attemptResult = recordVerificationAttempt(tNumber, false);
+      
+      if (attemptResult.isLocked) {
+        return {
+          success: false,
+          error: "Too many failed attempts. This treaty number has been locked. Please contact the system administrator.",
+          isLocked: true,
+          attemptsRemaining: 0
+        };
+      }
+      
+      return {
+        success: false,
+        error: "Birthdate does not match our records. Please verify and try again.",
+        attemptsRemaining: attemptResult.attemptsRemaining
+      };
+    }
+
+    // Check if already activated
+    if (member.auth) {
+      return {
+        success: false,
+        error: "Your treaty number and birthdate are correct, but this account has already been activated. Please use the login page to sign in."
+      };
+    }
+
+    if (member.activated === "ACTIVATED" || member.activated === "PENDING") {
+      return {
+        success: false,
+        error: "Your treaty number and birthdate are correct, but this account is already registered. Please use the login page to sign in."
+      };
+    }
+
+    // Success - clear attempts and return verified status
+    recordVerificationAttempt(tNumber, true);
+
+    return {
+      success: true,
+      verified: true,
+      member: {
+        firstName: member.first_name,
+        lastName: member.last_name,
+        tNumber: member.t_number
+      }
+    };
+
+  } catch (error: any) {
+    console.error("Verification error:", error);
+    return {
+      success: false,
+      error: "An error occurred during verification. Please try again."
+    };
+  }
+}

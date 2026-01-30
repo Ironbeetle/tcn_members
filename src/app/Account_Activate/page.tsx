@@ -19,6 +19,7 @@ type ProfileFormData = {
   community: string
   address: string
   phone_number: string
+  province: "AB" | "BC" | "MB" | "NB" | "NL" | "NS" | "NT" | "NU" | "ON" | "PE" | "QC" | "SK" | "YT"
   email: string
   image_url?: string
 }
@@ -225,6 +226,34 @@ export default function AccountActivatePage() {
                   />
                   {profileErrors.address && (
                     <p className="text-sm text-red-600">{profileErrors.address.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="province">Province/Territory *</Label>
+                  <select
+                    id="province"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    {...registerProfile("province", { required: "Province is required" })}
+                    disabled={isLoading}
+                    defaultValue="MB"
+                  >
+                    <option value="AB">Alberta</option>
+                    <option value="BC">British Columbia</option>
+                    <option value="MB">Manitoba</option>
+                    <option value="NB">New Brunswick</option>
+                    <option value="NL">Newfoundland and Labrador</option>
+                    <option value="NS">Nova Scotia</option>
+                    <option value="NT">Northwest Territories</option>
+                    <option value="NU">Nunavut</option>
+                    <option value="ON">Ontario</option>
+                    <option value="PE">Prince Edward Island</option>
+                    <option value="QC">Quebec</option>
+                    <option value="SK">Saskatchewan</option>
+                    <option value="YT">Yukon</option>
+                  </select>
+                  {profileErrors.province && (
+                    <p className="text-sm text-red-600">{profileErrors.province.message}</p>
                   )}
                 </div>
 

@@ -33,6 +33,12 @@ const RATE_LIMIT_CONFIG = {
     windowMs: 60 * 60 * 1000, // 1 hour
     blockDurationMs: 60 * 60 * 1000, // 1 hour block
   },
+  // Member verification (birthdate + treaty number)
+  verify: {
+    maxAttempts: 4,
+    windowMs: 60 * 60 * 1000, // 1 hour
+    blockDurationMs: 24 * 60 * 60 * 1000, // 24 hour block
+  },
   // API requests (general)
   api: {
     maxAttempts: 100,
