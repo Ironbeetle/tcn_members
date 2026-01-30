@@ -203,14 +203,35 @@ export default function page() {
             {/* Modal Content */}
             <div className="overflow-y-auto max-h-[calc(90vh-60px)] sm:max-h-[calc(90vh-80px)]">
               {/* Bulletin Image */}
-              <div className="relative w-full bg-stone-100 flex items-center justify-center">
-                {selectedBulletin.poster_url ? (
-                  <img
-                    src={selectedBulletin.poster_url}
-                    alt={selectedBulletin.title}
-                    className="w-full h-auto object-contain max-h-[60vh] sm:max-h-[70vh]"
-                  />
-                ) : (
+                <div className="relative w-full bg-stone-100 flex items-center justify-center">
+                  {selectedBulletin.poster_url ? (
+                    (() => {
+                      const u = selectedBulletin.poster_url || '';
+                      // Normalize different forms of stored paths to a web-safe URL.
+                      // Accept full http(s) URLs as-is, otherwise ensure a leading '/' and
+                      // strip any accidental 'public/' or 'file://' prefixes.
+                      const normalize = (url: string) => {
+                        if (!url) return '';
+                        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+                        // remove file://, leading public/ or /public/
+                        let cleaned = url.replace(/^file:\/\//, '');
+                        cleaned = cleaned.replace(/^\/?public\//, '');
+                        cleaned = cleaned.replace(/^public\//, '');
+                        cleaned = cleaned.replace(/\\/g, '/');
+                        return cleaned.startsWith('/') ? cleaned : `/${cleaned}`;
+                      };
+
+                      const posterSrc = normalize(u);
+
+                      return (
+                        <img
+                          src={posterSrc}
+                          alt={selectedBulletin.title}
+                          className="w-full h-auto object-contain max-h-[60vh] sm:max-h-[70vh]"
+                        />
+                      );
+                    })()
+                  ) : (
                   <div className="w-full h-48 sm:h-64 flex flex-col items-center justify-center text-stone-400">
                     <ImageIcon className="w-12 h-12 sm:w-16 sm:h-16 mb-2" />
                     <span>No image available</span>

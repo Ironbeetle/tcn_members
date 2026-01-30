@@ -398,13 +398,7 @@ export default function MemberAccount() {
                       <p className="font-semibold text-stone-800">{memberData.firstName} {memberData.lastName}</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <CreditCard className="w-5 h-5 text-amber-700 mt-1" />
-                    <div>
-                      <p className="text-sm text-stone-500">Treaty Number</p>
-                      <p className="font-semibold text-stone-800">{memberData.tNumber}</p>
-                    </div>
-                  </div>
+                 
                   <div className="flex items-start gap-3">
                     <User className="w-5 h-5 text-amber-700 mt-1" />
                     <div>
