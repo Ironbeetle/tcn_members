@@ -107,7 +107,25 @@ model fnauth {
   lockedUntil      DateTime?
   fnmemberId       String    @unique
   fnmember         fnmember  @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
+  webauthnCredentials WebAuthnCredential[]
 
+  @@schema("fnmemberlist")
+}
+
+model WebAuthnCredential {
+  id              String   @id @default(cuid())
+  created         DateTime @default(now())
+  updated         DateTime @default(now()) @updatedAt
+  credentialId    String   @unique          // Base64URL encoded credential ID
+  publicKey       String   @db.Text         // Base64URL encoded public key
+  counter         BigInt   @default(0)      // Sign counter for replay protection
+  transports      String?                   // JSON array of transports (e.g., ["internal"])
+  deviceName      String?                   // User-friendly device name
+  lastUsed        DateTime?
+  fnauthId        String
+  fnauth          fnauth   @relation(fields: [fnauthId], references: [id], onDelete: Cascade)
+
+  @@index([fnauthId])
   @@schema("fnmemberlist")
 }
 
@@ -265,7 +283,7 @@ model Council_History {
 
   @@schema("governance")
 }
-
+// communications department and staff
 model comm_User {
   id                     String                @id @default(cuid())
   email                  String                @unique

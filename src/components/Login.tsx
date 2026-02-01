@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "./ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Label } from "./ui/label"
+import { FingerprintLogin } from "./FingerprintLogin"
 import { 
   sanitizeInput, 
   isValidUsername, 
@@ -211,6 +212,20 @@ export default function Login() {
             >
               {isLoading ? "Logging in..." : "Login"}
             </Button>
+
+            {/* Fingerprint Login Option */}
+            <div className="relative py-2">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">Or</span>
+              </div>
+            </div>
+
+            <FingerprintLogin 
+              onError={(err) => setError(err)}
+            />
 
             <div className="text-center">
               <a 

@@ -25,8 +25,10 @@ import {
   Camera,
   Trash2,
   Download,
-  FileText
+  FileText,
+  Fingerprint
 } from 'lucide-react';
+import { FingerprintSettings } from '@/components/FingerprintSettings';
 
 
 const contactUpdateSchema = z.object({
@@ -561,6 +563,15 @@ export default function MemberAccount() {
                     </button>
                   </form>
                 )}
+              </motion.div>
+
+              {/* Fingerprint Sign-in Settings */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.25 }}
+              >
+                <FingerprintSettings />
               </motion.div>
             </div>
 

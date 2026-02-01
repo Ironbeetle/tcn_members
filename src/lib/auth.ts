@@ -5,7 +5,9 @@ import { prisma } from "@/lib/prisma";
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    // Standard username/password credentials
     CredentialsProvider({
+      id: "credentials",
       name: "credentials",
       credentials: {
         username: { label: "Username", type: "text" },
@@ -73,6 +75,51 @@ export const authOptions: NextAuthOptions = {
           };
         } catch (error) {
           console.error("Auth error:", error);
+          return null;
+        }
+      }
+    }),
+    // WebAuthn/Fingerprint credentials - authenticated by server action, 
+    // this provider just creates the session
+    CredentialsProvider({
+      id: "webauthn",
+      name: "webauthn",
+      credentials: {
+        memberId: { label: "Member ID", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.memberId) {
+          return null;
+        }
+
+        try {
+          // The actual WebAuthn verification happens in the server action
+          // This provider just looks up the member and creates a session
+          // The memberId is passed after successful WebAuthn verification
+          const authRecord = await prisma.fnauth.findUnique({
+            where: { fnmemberId: credentials.memberId },
+            include: {
+              fnmember: true
+            }
+          });
+
+          if (!authRecord) {
+            return null;
+          }
+
+          // Return user object that will be stored in JWT
+          return {
+            id: authRecord.fnmemberId,
+            email: authRecord.email,
+            name: `${authRecord.fnmember.first_name} ${authRecord.fnmember.last_name}`,
+            firstName: authRecord.fnmember.first_name,
+            lastName: authRecord.fnmember.last_name,
+            tNumber: authRecord.fnmember.t_number,
+            verified: authRecord.verified,
+            activated: authRecord.fnmember.activated,
+          };
+        } catch (error) {
+          console.error("WebAuthn auth error:", error);
           return null;
         }
       }
