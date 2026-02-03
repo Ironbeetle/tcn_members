@@ -34,6 +34,28 @@ type VerifiedMember = {
   tNumber: string
 }
 
+// Generate arrays for date dropdowns
+const currentYear = new Date().getFullYear()
+const years = Array.from({ length: 100 }, (_, i) => currentYear - i)
+const months = [
+  { value: '01', label: 'January' },
+  { value: '02', label: 'February' },
+  { value: '03', label: 'March' },
+  { value: '04', label: 'April' },
+  { value: '05', label: 'May' },
+  { value: '06', label: 'June' },
+  { value: '07', label: 'July' },
+  { value: '08', label: 'August' },
+  { value: '09', label: 'September' },
+  { value: '10', label: 'October' },
+  { value: '11', label: 'November' },
+  { value: '12', label: 'December' },
+]
+
+function getDaysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate()
+}
+
 export default function Register() {
   const [error, setError] = useState<string>("")
   const [success, setSuccess] = useState(false)
@@ -44,11 +66,65 @@ export default function Register() {
   const [showBirthdate, setShowBirthdate] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  // Birthdate dropdown state
+  const [birthYear, setBirthYear] = useState<string>('')
+  const [birthMonth, setBirthMonth] = useState<string>('')
+  const [birthDay, setBirthDay] = useState<string>('')
   const { createCredentials } = useAuth()
   const router = useRouter()
   
-  const { register: registerVerify, handleSubmit: handleVerifySubmit, formState: { errors: verifyErrors } } = useForm<VerificationFormData>()
+  const { register: registerVerify, handleSubmit: handleVerifySubmit, formState: { errors: verifyErrors }, setValue: setVerifyValue } = useForm<VerificationFormData>()
   const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<ActivateAccountFormData>()
+
+  // Calculate available days based on selected year and month
+  const availableDays = birthYear && birthMonth 
+    ? Array.from({ length: getDaysInMonth(parseInt(birthYear), parseInt(birthMonth)) }, (_, i) => String(i + 1).padStart(2, '0'))
+    : Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0'))
+
+  // Update the form value when all date parts are selected
+  const updateBirthdate = (year: string, month: string, day: string) => {
+    if (year && month && day) {
+      const formattedDate = `${year}-${month}-${day}`
+      setVerifyValue('birthdate', formattedDate)
+    } else {
+      setVerifyValue('birthdate', '')
+    }
+  }
+
+  const handleYearChange = (value: string) => {
+    setBirthYear(value)
+    // Reset day if it's no longer valid for the new month/year combination
+    if (birthMonth && birthDay) {
+      const maxDays = getDaysInMonth(parseInt(value), parseInt(birthMonth))
+      if (parseInt(birthDay) > maxDays) {
+        setBirthDay('')
+        updateBirthdate(value, birthMonth, '')
+      } else {
+        updateBirthdate(value, birthMonth, birthDay)
+      }
+    }
+  }
+
+  const handleMonthChange = (value: string) => {
+    setBirthMonth(value)
+    // Reset day if it's no longer valid for the new month/year combination
+    if (birthYear && birthDay) {
+      const maxDays = getDaysInMonth(parseInt(birthYear), parseInt(value))
+      if (parseInt(birthDay) > maxDays) {
+        setBirthDay('')
+        updateBirthdate(birthYear, value, '')
+      } else {
+        updateBirthdate(birthYear, value, birthDay)
+      }
+    } else if (birthYear) {
+      updateBirthdate(birthYear, value, birthDay)
+    }
+  }
+
+  const handleDayChange = (value: string) => {
+    setBirthDay(value)
+    updateBirthdate(birthYear, birthMonth, value)
+  }
   
   const password = watch("password")
 
@@ -226,21 +302,66 @@ export default function Register() {
                 {showBirthdate && (
                   <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                     <Label htmlFor="birthdate">Date of Birth</Label>
+                    {/* Hidden input for form submission */}
                     <input
-                      id="birthdate"
-                      type="date"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      type="hidden"
                       {...registerVerify("birthdate", { 
                         required: "Date of birth is required"
                       })}
-                      disabled={isVerifying}
-                      max={new Date().toISOString().split('T')[0]}
                     />
+                    {/* Mobile-friendly dropdown selects */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {/* Year dropdown */}
+                      <select
+                        aria-label="Birth year"
+                        value={birthYear}
+                        onChange={(e) => handleYearChange(e.target.value)}
+                        disabled={isVerifying}
+                        className="w-full px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white text-sm"
+                      >
+                        <option value="">Year</option>
+                        {years.map((year) => (
+                          <option key={year} value={year}>
+                            {year}
+                          </option>
+                        ))}
+                      </select>
+                      {/* Month dropdown */}
+                      <select
+                        aria-label="Birth month"
+                        value={birthMonth}
+                        onChange={(e) => handleMonthChange(e.target.value)}
+                        disabled={isVerifying}
+                        className="w-full px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white text-sm"
+                      >
+                        <option value="">Month</option>
+                        {months.map((month) => (
+                          <option key={month.value} value={month.value}>
+                            {month.label}
+                          </option>
+                        ))}
+                      </select>
+                      {/* Day dropdown */}
+                      <select
+                        aria-label="Birth day"
+                        value={birthDay}
+                        onChange={(e) => handleDayChange(e.target.value)}
+                        disabled={isVerifying}
+                        className="w-full px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white text-sm"
+                      >
+                        <option value="">Day</option>
+                        {availableDays.map((day) => (
+                          <option key={day} value={day}>
+                            {parseInt(day)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                     {verifyErrors.birthdate && (
                       <p className="text-sm text-red-600">{verifyErrors.birthdate.message}</p>
                     )}
                     <p className="text-xs text-gray-500">
-                      Enter your date of birth to verify your identity
+                      Select your date of birth to verify your identity
                     </p>
                   </div>
                 )}
@@ -440,6 +561,9 @@ export default function Register() {
                 setIsVerified(false)
                 setVerifiedMember(null)
                 setShowBirthdate(false)
+                setBirthYear('')
+                setBirthMonth('')
+                setBirthDay('')
               }}
               className="w-full text-sm text-gray-500 hover:text-gray-700 underline"
             >

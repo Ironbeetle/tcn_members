@@ -308,6 +308,9 @@ model comm_User {
   sessions               comm_Session[]
   smslog                 comm_SmsLog[]
   staffemail             comm_StaffEmailLog[]
+  signUpForms            comm_SignUpForm[]
+  timesheets             comm_TimeSheet[]
+  travelForms            comm_TravelForm[]
 
   @@map("User")
   @@schema("msgmanager")
@@ -430,20 +433,27 @@ model comm_MsgCnC {
 }
 
 model comm_SignUpForm {
-  id           String                @id @default(cuid())
-  portalFormId String?               @unique
-  title        String
-  description  String?
-  deadline     DateTime?
-  maxEntries   Int?
-  isActive     Boolean               @default(true)
-  createdBy    String
-  createdAt    DateTime              @default(now())
-  updatedAt    DateTime              @updatedAt
-  syncedAt     DateTime?
-  fields       comm_FormField[]
-  submissions  comm_FormSubmission[]
+  id              String                @id @default(cuid())
+  portalFormId    String?               @unique
+  title           String
+  description     String?               @db.Text
+  category        comm_FormCategory     @default(BAND_OFFICE)
+  deadline        DateTime?
+  maxEntries      Int?
+  isActive        Boolean               @default(true)
+  allowResubmit   Boolean               @default(false)
+  resubmitMessage String?               @db.Text
+  createdBy       String
+  creator         comm_User             @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  syncedAt        DateTime?
+  fields          comm_FormField[]
+  submissions     comm_FormSubmission[]
 
+  @@index([createdBy])
+  @@index([category])
+  @@index([isActive])
   @@map("SignUpForm")
   @@schema("msgmanager")
 }
@@ -467,7 +477,7 @@ model comm_FormField {
 model comm_FormSubmission {
   id          String          @id @default(cuid())
   formId      String
-  memberId    Int?
+  memberId    String?
   name        String
   email       String?
   phone       String?
@@ -475,7 +485,136 @@ model comm_FormSubmission {
   submittedAt DateTime        @default(now())
   form        comm_SignUpForm @relation(fields: [formId], references: [id], onDelete: Cascade)
 
+  @@index([formId])
+  @@index([memberId])
   @@map("FormSubmission")
+  @@schema("msgmanager")
+}
+
+// ==================== TIMESHEETS ====================
+
+model comm_TimeSheet {
+  id               String                @id @default(cuid())
+  created          DateTime              @default(now())
+  updated          DateTime              @updatedAt
+  userId           String
+  user             comm_User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Pay period
+  payPeriodStart   DateTime
+  payPeriodEnd     DateTime
+  
+  // Daily hours as JSON
+  // { "2026-01-06": { "startTime": "08:00", "endTime": "16:30", "breakMinutes": 30, "totalHours": 8.0 }, ... }
+  dailyHours       Json                  @default("{}")
+  
+  // Totals
+  regularHours     Float                 @default(0)
+  overtimeHours    Float                 @default(0)
+  sickHours        Float                 @default(0)
+  vacationHours    Float                 @default(0)
+  statHolidayHours Float                 @default(0)
+  totalHours       Float                 @default(0)
+  
+  notes            String?               @db.Text
+  
+  // Status workflow
+  status           comm_TimeSheetStatus  @default(DRAFT)
+  submittedDate    DateTime?
+  approvedDate     DateTime?
+  approvedBy       String?
+  rejectedDate     DateTime?
+  rejectedBy       String?
+  rejectionReason  String?
+
+  @@unique([userId, payPeriodStart])
+  @@index([userId])
+  @@index([status])
+  @@index([payPeriodStart])
+  @@map("TimeSheet")
+  @@schema("msgmanager")
+}
+
+// ==================== TRAVEL FORMS ====================
+
+model comm_TravelForm {
+  id                    String                    @id @default(cuid())
+  created               DateTime                  @default(now())
+  updated               DateTime                  @updatedAt
+  userId                String
+  user                  comm_User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Basic Info
+  name                  String
+  destination           String
+  departureDate         DateTime
+  returnDate            DateTime
+  reasonsForTravel      String                    @db.Text
+  
+  // Accommodation
+  hotelRate             Float                     @default(200)
+  hotelNights           Int                       @default(0)
+  hotelTotal            Float                     @default(0)
+  privateRate           Float                     @default(50)
+  privateNights         Int                       @default(0)
+  privateTotal          Float                     @default(0)
+  
+  // Meals
+  breakfastRate         Float                     @default(20.50)
+  breakfastDays         Int                       @default(0)
+  breakfastTotal        Float                     @default(0)
+  lunchRate             Float                     @default(20.10)
+  lunchDays             Int                       @default(0)
+  lunchTotal            Float                     @default(0)
+  dinnerRate            Float                     @default(50.65)
+  dinnerDays            Int                       @default(0)
+  dinnerTotal           Float                     @default(0)
+  
+  // Incidentals
+  incidentalRate        Float                     @default(10)
+  incidentalDays        Int                       @default(0)
+  incidentalTotal       Float                     @default(0)
+  
+  // Transportation
+  transportationType    comm_TransportationType   @default(PERSONAL_VEHICLE)
+  personalVehicleRate   Float                     @default(0.50)
+  licensePlateNumber    String?
+  oneWayWinnipegKm      Int                       @default(904)
+  oneWayWinnipegTrips   Int                       @default(0)
+  oneWayWinnipegTotal   Float                     @default(0)
+  oneWayThompsonKm      Int                       @default(150)
+  oneWayThompsonTrips   Int                       @default(0)
+  oneWayThompsonTotal   Float                     @default(0)
+  winnipegFlatRate      Float                     @default(450)
+  thompsonFlatRate      Float                     @default(100)
+  publicTransportTotal  Float                     @default(0)
+  
+  // Taxi
+  taxiFareRate          Float                     @default(17.30)
+  taxiFareDays          Int                       @default(0)
+  taxiFareTotal         Float                     @default(0)
+  
+  // Parking
+  parkingTotal          Float                     @default(0)
+  
+  // Grand Total
+  grandTotal            Float                     @default(0)
+  
+  // Status workflow
+  status                comm_TravelFormStatus     @default(DRAFT)
+  submittedDate         DateTime?
+  approvedDate          DateTime?
+  approvedBy            String?
+  rejectedDate          DateTime?
+  rejectedBy            String?
+  rejectionReason       String?
+  issuedDate            DateTime?
+  completedDate         DateTime?
+
+  @@index([userId])
+  @@index([status])
+  @@index([departureDate])
+  @@map("TravelForm")
   @@schema("msgmanager")
 }
 
@@ -561,16 +700,24 @@ enum Categories {
 }
 
 enum FormCategory {
+  // Legacy values (kept for backward compatibility with existing forms)
   GENERAL
   HEALTH
   EDUCATION
   HOUSING
   EMPLOYMENT
-  RECREATION
   SOCIAL_SERVICES
   CHIEFNCOUNCIL
   PROGRAM_EVENTS
   ANNOUNCEMENTS
+  // New values matching TCN_COMM desktop app departments
+  BAND_OFFICE
+  J_W_HEALTH_CENTER
+  CSCMEC
+  COUNCIL
+  RECREATION
+  UTILITIES
+  TRSC
 
   @@schema("tcnbulletin")
 }
@@ -622,6 +769,7 @@ enum comm_Department {
   COUNCIL
   RECREATION
   UTILITIES
+  TRSC
 
   @@map("Department")
   @@schema("msgmanager")
@@ -652,6 +800,67 @@ enum comm_FieldType {
   PHONE
 
   @@map("FieldType")
+  @@schema("msgmanager")
+}
+
+enum comm_TimeSheetStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+
+  @@map("TimeSheetStatus")
+  @@schema("msgmanager")
+}
+
+enum comm_TransportationType {
+  PERSONAL_VEHICLE
+  PUBLIC_TRANSPORT_WINNIPEG
+  PUBLIC_TRANSPORT_THOMPSON
+  COMBINATION
+  OTHER
+
+  @@map("TransportationType")
+  @@schema("msgmanager")
+}
+
+enum comm_TravelFormStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  ISSUED
+  COMPLETED
+  CANCELLED
+
+  @@map("TravelFormStatus")
+  @@schema("msgmanager")
+}
+
+enum comm_BulletinCategory {
+  CHIEFNCOUNCIL
+  HEALTH
+  EDUCATION
+  RECREATION
+  EMPLOYMENT
+  PROGRAM_EVENTS
+  ANNOUNCEMENTS
+
+  @@map("BulletinCategory")
+  @@schema("msgmanager")
+}
+
+enum comm_FormCategory {
+  BAND_OFFICE
+  J_W_HEALTH_CENTER
+  CSCMEC
+  COUNCIL
+  RECREATION
+  UTILITIES
+  TRSC
+
+  @@map("FormCategory_Comm")
   @@schema("msgmanager")
 }
 

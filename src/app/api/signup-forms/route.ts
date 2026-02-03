@@ -3,6 +3,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+// Valid categories that match the FormCategory enum in Prisma schema
+const VALID_CATEGORIES = [
+  // Legacy values
+  'GENERAL', 'HEALTH', 'EDUCATION', 'HOUSING', 'EMPLOYMENT', 
+  'SOCIAL_SERVICES', 'CHIEFNCOUNCIL', 'PROGRAM_EVENTS', 'ANNOUNCEMENTS',
+  // TCN_COMM desktop app values
+  'BAND_OFFICE', 'J_W_HEALTH_CENTER', 'CSCMEC', 'COUNCIL', 
+  'RECREATION', 'UTILITIES', 'TRSC'
+] as const;
+
+type FormCategory = typeof VALID_CATEGORIES[number];
+
+// Map legacy/alternative category names to valid enum values
+function normalizeCategory(category: string | undefined | null): FormCategory {
+  if (!category) return 'GENERAL';
+  
+  const upperCategory = category.toUpperCase().trim();
+  
+  // Check if it's already a valid category
+  if (VALID_CATEGORIES.includes(upperCategory as FormCategory)) {
+    return upperCategory as FormCategory;
+  }
+  
+  // Map alternative names to valid categories
+  const categoryMap: Record<string, FormCategory> = {
+    'CHIEF_AND_COUNCIL': 'COUNCIL',
+    'CHIEF_N_COUNCIL': 'CHIEFNCOUNCIL',
+    'BAND OFFICE': 'BAND_OFFICE',
+    'HEALTH CENTER': 'J_W_HEALTH_CENTER',
+    'HEALTH_CENTER': 'J_W_HEALTH_CENTER',
+    'JW_HEALTH_CENTER': 'J_W_HEALTH_CENTER',
+    'LAND_USE_PROGRAMS': 'TRSC',
+    'LAND USE PROGRAMS': 'TRSC',
+  };
+  
+  return categoryMap[upperCategory] || 'GENERAL';
+}
+
 // Validate API key
 function validateApiKey(request: NextRequest): boolean {
   const apiKey = request.headers.get('x-api-key');
@@ -31,6 +69,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Normalize the category to a valid enum value
+    const normalizedCategory = normalizeCategory(body.category);
+    
+    // Log sync attempt for debugging
+    console.log(`[SignupForm Sync] Received form: ${body.formId}, title: "${body.title}", category: "${body.category}" -> "${normalizedCategory}"`);
+
     // Upsert the form (create or update)
     const form = await prisma.signup_form.upsert({
       where: { tcn_form_id: body.formId },
@@ -40,9 +84,11 @@ export async function POST(request: NextRequest) {
         deadline: body.deadline ? new Date(body.deadline) : null,
         max_entries: body.maxEntries || null,
         is_active: body.isActive ?? true,
-        category: body.category || 'GENERAL',
+        category: normalizedCategory,
         created_by: body.createdBy || null,
         fields: body.fields,
+        allow_resubmit: body.allowResubmit ?? false,
+        resubmit_message: body.resubmitMessage || null,
         updated: new Date(),
       },
       create: {
@@ -52,9 +98,11 @@ export async function POST(request: NextRequest) {
         deadline: body.deadline ? new Date(body.deadline) : null,
         max_entries: body.maxEntries || null,
         is_active: body.isActive ?? true,
-        category: body.category || 'GENERAL',
+        category: normalizedCategory,
         created_by: body.createdBy || null,
         fields: body.fields,
+        allow_resubmit: body.allowResubmit ?? false,
+        resubmit_message: body.resubmitMessage || null,
       },
     });
 
