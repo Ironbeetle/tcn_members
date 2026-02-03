@@ -343,15 +343,41 @@ export default function TCNHomePage() {
       content: (
         <div className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group">
           <div className="relative h-36 sm:h-48 bg-gradient-to-br from-amber-100 to-amber-200 overflow-hidden">
-            <img src="/TCNintro.jpg" alt="Bulletin Board" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            <img src="/bandofficetab.jpg" alt="Bulletin Board" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
             <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4">
               <h3 className="text-white text-lg sm:text-xl font-bold mb-1">Community Bulletin Board</h3>
-              <p className="text-amber-100 text-xs sm:text-sm">5 new announcements today</p>
+              <span className="text-amber-200 text-sm sm:text-base font-medium">Latest news, events, and announcements</span>
             </div>
           </div>
           <div className="p-3 sm:p-4 flex items-center justify-between">
             <span className="text-stone-600 font-medium text-sm sm:text-base">View all posts</span>
+            <span className="text-amber-700 font-bold">→</span>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'Community Matters',
+      type: 'link',
+      link: '/TCN_Matters',
+      gradient: 'from-orange-700 to-orange-900',
+      icon: Users,
+      title: 'Current Issues',
+      description: 'Addressing the most urgent issues facing Tataskweyak today.',
+      badge: 'Coming soon: Resources, support services, and healing circle information',
+      badgeTextColor: 'text-green-100',
+      content: (
+        <div className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group">
+          <div className="relative h-36 sm:h-48 bg-gradient-to-br from-amber-100 to-amber-200 overflow-hidden">
+            <img src="/tcnarialview2.jpg" alt="Bulletin Board" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+            <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4">
+              <h3 className="text-white text-lg sm:text-xl font-bold mb-1">Community Matters</h3> 
+            </div>
+          </div>
+          <div className="p-3 sm:p-4 flex items-center justify-between">
+            <span className="text-stone-600 font-medium text-sm sm:text-base">View</span>
             <span className="text-amber-700 font-bold">→</span>
           </div>
         </div>
@@ -374,15 +400,6 @@ export default function TCNHomePage() {
       description: 'Preserving and sharing our language, culture, and traditional knowledge with future generations.',
       badge: 'Coming soon: Language lessons, cultural workshops, and elder teachings',
       badgeTextColor: 'text-amber-100'
-    },
-    {
-      id: 'social',
-      gradient: 'from-blue-700 to-blue-900',
-      icon: Users,
-      title: 'Social Issues & Support',
-      description: 'Addressing community concerns and providing support services for members in need.',
-      badge: 'Coming soon: Support programs, advocacy resources, and community initiatives',
-      badgeTextColor: 'text-blue-100'
     },
     {
       id: 'youth',
