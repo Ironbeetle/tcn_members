@@ -137,7 +137,8 @@ model bulletin {
   updated    DateTime   @default(now()) @updatedAt
   title      String
   subject    String
-  poster_url String
+  content    String?
+  poster_url String?
   category   Categories @default(CHIEFNCOUNCIL)
   sourceId   String?    @unique
   userId     String?
@@ -402,7 +403,8 @@ model comm_BulletinApiLog {
   id         String          @id @default(cuid())
   title      String
   subject    String
-  poster_url String
+  content    String?
+  poster_url String?
   category   comm_Categories @default(CHIEFNCOUNCIL)
   userId     String
   created    DateTime        @default(now())

@@ -59,17 +59,23 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tataskweyak.com';
     const posterUrl = `${baseUrl}/bulletinboard/${filename}`;
 
-    // Update bulletin with poster URL
-    await prisma.comm_BulletinApiLog.update({
-      where: { id: sourceId },
-      data: { poster_url: posterUrl }
+    // Only update if bulletin exists (poster may be uploaded before bulletin creation)
+    const existingBulletin = await prisma.comm_BulletinApiLog.findUnique({
+      where: { id: sourceId }
     });
+    
+    if (existingBulletin) {
+      await prisma.comm_BulletinApiLog.update({
+        where: { id: sourceId },
+        data: { poster_url: posterUrl }
+      });
 
-    // Also update the portal bulletin
-    await prisma.bulletin.updateMany({
-      where: { sourceId },
-      data: { poster_url: posterUrl }
-    });
+      // Also update the portal bulletin
+      await prisma.bulletin.updateMany({
+        where: { sourceId },
+        data: { poster_url: posterUrl }
+      });
+    }
 
     logApiAccess(request, 'comm:bulletin:poster:POST', true, { sourceId, filename });
 

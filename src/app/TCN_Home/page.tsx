@@ -237,7 +237,12 @@ export default function TCNHomePage() {
   );
 
   // ========== DESKTOP RIGHT SIDEBAR (Stats) ==========
-  const DesktopRightSidebar = () => (
+  // Only render when on desktop to prevent chart dimension errors
+  const DesktopRightSidebar = () => {
+    // Don't render chart components when not on desktop to avoid negative dimension errors
+    if (!isDesktop) return null;
+    
+    return (
     <aside className="hidden lg:block lg:col-span-3 space-y-4">
       <motion.div
         initial={{ opacity: 0, x: 20 }}
@@ -254,8 +259,8 @@ export default function TCNHomePage() {
         ) : memberStats ? (
           <>
             {/* Pie Chart */}
-            <div className="h-48 w-full">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-48 w-full min-h-[192px]">
+              <ResponsiveContainer width="100%" height="100%" minHeight={192}>
                 <PieChart>
                   <Pie
                     data={pieChartData}
@@ -333,6 +338,7 @@ export default function TCNHomePage() {
       </motion.div>
     </aside>
   );
+  };
 
   // ========== CONTENT CARDS (shared between mobile and desktop) ==========
   const contentCards = [

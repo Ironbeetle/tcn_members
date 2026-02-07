@@ -269,7 +269,7 @@ export type MemberWithRelationsUpdate = z.infer<typeof memberWithRelationsUpdate
 export type BulkDelete = z.infer<typeof bulkDeleteSchema>;
 export type BulkUpdate = z.infer<typeof bulkUpdateSchema>;
 
-// Bulletin validations
+// Bulletin validations - poster_url and content are both optional/nullable
 export const bulletinCreateSchema = z.object({
   title: z.string()
     .min(1, "Title is required")
@@ -280,7 +280,12 @@ export const bulletinCreateSchema = z.object({
   poster_url: z.string()
     .url("Must be a valid URL")
     .optional()
+    .nullable()
     .or(z.literal("")),
+  content: z.string()
+    .max(10000, "Content must be less than 10000 characters")
+    .optional()
+    .nullable(),
   category: z.enum([
     "CHIEFNCOUNCIL",
     "HEALTH",

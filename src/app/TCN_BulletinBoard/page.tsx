@@ -89,7 +89,8 @@ type Bulletin = {
   id: string;
   title: string;
   subject: string;
-  poster_url: string;
+  content: string | null;
+  poster_url: string | null;
   category: string;
   created: Date;
   updated: Date;
@@ -202,17 +203,26 @@ export default function page() {
 
             {/* Modal Content */}
             <div className="overflow-y-auto max-h-[calc(90vh-60px)] sm:max-h-[calc(90vh-80px)]">
-              {/* Bulletin Image */}
+              {/* Bulletin Image or Text Content */}
                 <div className="relative w-full bg-stone-100 flex items-center justify-center">
                   {selectedBulletin.poster_url ? (
                     (() => {
                       const u = selectedBulletin.poster_url || '';
                       // Normalize different forms of stored paths to a web-safe URL.
-                      // Accept full http(s) URLs as-is, otherwise ensure a leading '/' and
-                      // strip any accidental 'public/' or 'file://' prefixes.
+                      // Extract path from full URLs, strip prefixes, ensure leading slash.
                       const normalize = (url: string) => {
                         if (!url) return '';
-                        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+                        // For full URLs, extract just the pathname
+                        if (url.startsWith('http://') || url.startsWith('https://')) {
+                          try {
+                            const urlObj = new URL(url);
+                            return urlObj.pathname;
+                          } catch {
+                            // If URL parsing fails, try to extract path after domain
+                            const match = url.match(/https?:\/\/[^\/]+(\/.*)/);
+                            return match ? match[1] : url;
+                          }
+                        }
                         // remove file://, leading public/ or /public/
                         let cleaned = url.replace(/^file:\/\//, '');
                         cleaned = cleaned.replace(/^\/?public\//, '');
@@ -231,10 +241,18 @@ export default function page() {
                         />
                       );
                     })()
+                  ) : selectedBulletin.content ? (
+                    <div className="w-full p-6 sm:p-8 bg-gradient-to-br from-amber-50 to-stone-50 min-h-[200px] sm:min-h-[300px] flex items-center justify-center">
+                      <div className="prose prose-lg max-w-none">
+                        <p className="text-lg sm:text-xl leading-relaxed text-stone-700 whitespace-pre-wrap">
+                          {selectedBulletin.content}
+                        </p>
+                      </div>
+                    </div>
                   ) : (
                   <div className="w-full h-48 sm:h-64 flex flex-col items-center justify-center text-stone-400">
                     <ImageIcon className="w-12 h-12 sm:w-16 sm:h-16 mb-2" />
-                    <span>No image available</span>
+                    <span>No content available</span>
                   </div>
                 )}
               </div>

@@ -36,6 +36,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         id,
         title,
         subject,
+        content,
         poster_url,
         category,
         "userId",
@@ -55,6 +56,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       id: bulletin.id,
       title: bulletin.title,
       subject: bulletin.subject,
+      content: bulletin.content,
       posterUrl: bulletin.poster_url,
       category: bulletin.category,
       userId: bulletin.userId,
@@ -78,7 +80,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const { title, subject, poster_url, category } = body;
+    const { title, subject, poster_url, content, category } = body;
 
     // Check bulletin exists
     const existing = await prisma.$queryRaw<any[]>`
@@ -108,6 +110,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       values.push(poster_url);
     }
 
+    if (content !== undefined) {
+      updates.push(`content = $${values.length + 1}`);
+      values.push(content);
+    }
+
     if (category !== undefined) {
       updates.push(`category = $${values.length + 1}::"msgmanager"."Categories"`);
       values.push(category);
@@ -124,7 +131,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       UPDATE msgmanager."BulletinApiLog"
       SET ${updates.join(', ')}
       WHERE id = $${values.length}
-      RETURNING id, title, subject, poster_url, category, updated
+      RETURNING id, title, subject, content, poster_url, category, updated
     `, ...values);
 
     const updated = result[0];
@@ -135,6 +142,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       SET 
         title = ${updated.title},
         subject = ${updated.subject},
+        content = ${updated.content},
         poster_url = ${updated.poster_url},
         category = ${updated.category}::"tcnbulletin"."Categories",
         updated = NOW()
@@ -154,6 +162,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     console.error('Bulletin update error:', error);
     return apiError('Failed to update bulletin', 500);
   }
+}
+
+// PUT - Update bulletin (alias for PATCH for compatibility)
+export async function PUT(request: NextRequest, { params }: RouteParams) {
+  return PATCH(request, { params });
 }
 
 // DELETE - Delete bulletin

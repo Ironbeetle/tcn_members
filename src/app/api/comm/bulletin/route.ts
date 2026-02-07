@@ -19,11 +19,12 @@ import { z } from 'zod';
 // Bulletin categories (matching schema)
 const categories = ['CHIEFNCOUNCIL', 'HEALTH', 'EDUCATION', 'RECREATION', 'EMPLOYMENT', 'PROGRAM_EVENTS', 'ANNOUNCEMENTS'] as const;
 
-// Bulletin schema
+// Bulletin schema - supports poster_url OR content (both optional/nullable)
 const bulletinSchema = z.object({
   title: z.string().min(1).max(200),
   subject: z.string().min(1).max(500),
-  poster_url: z.string().url(),
+  poster_url: z.string().url().optional().nullable().or(z.literal('')),
+  content: z.string().max(10000).optional().nullable(),
   category: z.enum(categories).default('ANNOUNCEMENTS'),
   userId: z.string().optional(), // Staff user ID
 });
@@ -50,6 +51,7 @@ export async function GET(request: NextRequest) {
         id,
         title,
         subject,
+        content,
         poster_url,
         category,
         "userId",
@@ -76,6 +78,7 @@ export async function GET(request: NextRequest) {
         id: b.id,
         title: b.title,
         subject: b.subject,
+        content: b.content,
         posterUrl: b.poster_url,
         category: b.category,
         userId: b.userId,
@@ -112,18 +115,19 @@ export async function POST(request: NextRequest) {
       return apiError('Validation error', 400, validation.error.issues);
     }
 
-    const { title, subject, poster_url, category, userId } = validation.data;
+    const { title, subject, poster_url, content, category, userId } = validation.data;
 
     // Create bulletin in msgmanager schema
     const bulletinResult = await prisma.$queryRaw<any[]>`
       INSERT INTO msgmanager."BulletinApiLog" (
-        id, title, subject, poster_url, category, "userId", created, updated
+        id, title, subject, content, poster_url, category, "userId", created, updated
       )
       VALUES (
         gen_random_uuid()::text,
         ${title},
         ${subject},
-        ${poster_url},
+        ${content || null},
+        ${poster_url || null},
         ${category}::"msgmanager"."Categories",
         ${userId || 'api-user'},
         NOW(),
@@ -137,13 +141,14 @@ export async function POST(request: NextRequest) {
     // Sync to portal's tcnbulletin schema
     await prisma.$executeRaw`
       INSERT INTO tcnbulletin.bulletin (
-        id, title, subject, poster_url, category, "sourceId", "userId", created, updated
+        id, title, subject, content, poster_url, category, "sourceId", "userId", created, updated
       )
       VALUES (
         gen_random_uuid()::text,
         ${title},
         ${subject},
-        ${poster_url},
+        ${content || null},
+        ${poster_url || null},
         ${category}::"tcnbulletin"."Categories",
         ${bulletin.id},
         ${userId || null},
@@ -153,6 +158,7 @@ export async function POST(request: NextRequest) {
       ON CONFLICT ("sourceId") DO UPDATE SET
         title = EXCLUDED.title,
         subject = EXCLUDED.subject,
+        content = EXCLUDED.content,
         poster_url = EXCLUDED.poster_url,
         category = EXCLUDED.category,
         updated = NOW()

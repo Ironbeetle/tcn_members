@@ -107,7 +107,8 @@ type Bulletin = {
   id: string;
   title: string;
   subject: string;
-  poster_url: string;
+  content: string | null;
+  poster_url: string | null;
   category: string;
   created: Date;
   updated: Date;
@@ -382,15 +383,46 @@ export default function TCNLocalGovernancePage() {
 
             {/* Modal Content */}
             <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
-              {selectedBulletin.poster_url && (
-                <div className="relative w-full bg-stone-100 flex items-center justify-center">
-                  <img
-                    src={selectedBulletin.poster_url}
-                    alt={selectedBulletin.title}
-                    className="w-full h-auto object-contain max-h-[70vh]"
-                  />
+              {selectedBulletin.poster_url ? (
+                (() => {
+                  const u = selectedBulletin.poster_url || '';
+                  // Normalize: extract path from full URLs
+                  const normalize = (url: string) => {
+                    if (!url) return '';
+                    if (url.startsWith('http://') || url.startsWith('https://')) {
+                      try {
+                        const urlObj = new URL(url);
+                        return urlObj.pathname;
+                      } catch {
+                        const match = url.match(/https?:\/\/[^\/]+(\/.*)/);
+                        return match ? match[1] : url;
+                      }
+                    }
+                    let cleaned = url.replace(/^file:\/\//, '');
+                    cleaned = cleaned.replace(/^\/?public\//, '');
+                    cleaned = cleaned.replace(/\\/g, '/');
+                    return cleaned.startsWith('/') ? cleaned : `/${cleaned}`;
+                  };
+                  const posterSrc = normalize(u);
+                  return (
+                    <div className="relative w-full bg-stone-100 flex items-center justify-center">
+                      <img
+                        src={posterSrc}
+                        alt={selectedBulletin.title}
+                        className="w-full h-auto object-contain max-h-[70vh]"
+                      />
+                    </div>
+                  );
+                })()
+              ) : selectedBulletin.content ? (
+                <div className="w-full p-6 sm:p-8 bg-gradient-to-br from-blue-50 to-stone-50 min-h-[200px] sm:min-h-[300px] flex items-center justify-center">
+                  <div className="prose prose-lg max-w-none">
+                    <p className="text-lg sm:text-xl leading-relaxed text-stone-700 whitespace-pre-wrap">
+                      {selectedBulletin.content}
+                    </p>
+                  </div>
                 </div>
-              )}
+              ) : null}
               <div className="p-6">
                 <h2 className="text-2xl font-bold text-stone-800 mb-2">{selectedBulletin.title}</h2>
                 <p className="text-stone-600 whitespace-pre-wrap">{selectedBulletin.subject}</p>
