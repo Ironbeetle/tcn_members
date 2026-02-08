@@ -37,14 +37,33 @@ export async function GET(
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
     const offset = parseInt(searchParams.get('offset') || '0');
 
+    // Find the portal form that links to this comm form
+    const portalForm = await prisma.signup_form.findFirst({
+      where: { tcn_form_id: id }  // id is the comm_SignUpForm.id
+    });
+
+    if (!portalForm) {
+      return apiSuccess({
+        submissions: [],
+        count: 0,
+        total: 0,
+        pagination: {
+          limit,
+          offset,
+          hasMore: false,
+        },
+      });
+    }
+
+    // Query submissions from the portal form
     const [submissions, total] = await Promise.all([
-      prisma.comm_FormSubmission.findMany({
-        where: { formId: id },
-        orderBy: { submittedAt: 'desc' },
+      prisma.signup_submission.findMany({
+        where: { formId: portalForm.id },
+        orderBy: { created: 'desc' },
         take: limit,
         skip: offset,
       }),
-      prisma.comm_FormSubmission.count({ where: { formId: id } }),
+      prisma.signup_submission.count({ where: { formId: portalForm.id } }),
     ]);
 
     logApiAccess(request, 'comm:signup-forms:submissions:GET', true, { formId: id, count: submissions.length });

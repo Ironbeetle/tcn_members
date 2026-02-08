@@ -116,11 +116,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if email already exists
-    const existing = await prisma.$queryRaw<any[]>`
-      SELECT id FROM msgmanager."User" WHERE email = ${email}
-    `;
+    const existing = await prisma.comm_User.findUnique({
+      where: { email },
+      select: { id: true }
+    });
 
-    if (existing.length > 0) {
+    if (existing) {
       return apiError('User with this email already exists', 409);
     }
 
@@ -129,25 +130,25 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user
-    const result = await prisma.$queryRaw<any[]>`
-      INSERT INTO msgmanager."User" (
-        id, email, password, first_name, last_name, department, role, created, updated
-      )
-      VALUES (
-        gen_random_uuid()::text,
-        ${email},
-        ${hashedPassword},
-        ${firstName},
-        ${lastName},
-        ${department || 'BAND_OFFICE'},
-        ${role || 'STAFF'},
-        NOW(),
-        NOW()
-      )
-      RETURNING id, email, first_name, last_name, department, role, created
-    `;
-
-    const newUser = result[0];
+    const newUser = await prisma.comm_User.create({
+      data: {
+        email,
+        password: hashedPassword,
+        first_name: firstName,
+        last_name: lastName,
+        department: department || 'BAND_OFFICE',
+        role: role || 'STAFF',
+      },
+      select: {
+        id: true,
+        email: true,
+        first_name: true,
+        last_name: true,
+        department: true,
+        role: true,
+        created: true,
+      }
+    });
 
     logApiAccess(request, 'comm:users:POST', true, { userId: newUser.id });
 

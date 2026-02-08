@@ -312,6 +312,7 @@ model comm_User {
   signUpForms            comm_SignUpForm[]
   timesheets             comm_TimeSheet[]
   travelForms            comm_TravelForm[]
+  officeMemos            comm_OfficeMemo[]     @relation("OfficeMemos")
 
   @@map("User")
   @@schema("msgmanager")
@@ -537,6 +538,8 @@ model comm_TimeSheet {
   @@schema("msgmanager")
 }
 
+
+
 // ==================== TRAVEL FORMS ====================
 
 model comm_TravelForm {
@@ -619,6 +622,44 @@ model comm_TravelForm {
   @@map("TravelForm")
   @@schema("msgmanager")
 }
+
+// ==================== INTER-OFFICE MEMOS ====================
+
+model comm_OfficeMemo {
+  id          String            @id @default(cuid())
+  
+  // Content
+  title       String
+  content     String            @db.Text
+  priority    comm_MemoPriority @default(low)
+  
+  // Targeting
+  department  String?           // Target specific department, null = all departments
+  
+  // Display options
+  isPinned    Boolean           @default(false)
+  isPublished Boolean           @default(true)
+  expiryDate  DateTime?         // Optional auto-expire
+  
+  // Read tracking - JSON array of user IDs
+  readBy      String            @default("[]") @db.Text
+  
+  // Timestamps
+  created     DateTime          @default(now())
+  updated     DateTime          @default(now()) @updatedAt
+  
+  // Author relation
+  authorId    String
+  author      comm_User         @relation("OfficeMemos", fields: [authorId], references: [id], onDelete: Cascade)
+  
+  @@index([department])
+  @@index([priority])
+  @@index([created])
+  @@map("OfficeMemo")
+  @@schema("msgmanager")
+}
+
+// Sample barcode scanner app
 
 model ScanSession {
   id         String        @id @default(cuid())
@@ -863,6 +904,15 @@ enum comm_FormCategory {
   TRSC
 
   @@map("FormCategory_Comm")
+  @@schema("msgmanager")
+}
+
+enum comm_MemoPriority {
+  low
+  medium
+  high
+
+  @@map("MemoPriority")
   @@schema("msgmanager")
 }
 
