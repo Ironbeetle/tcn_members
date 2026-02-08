@@ -50,11 +50,11 @@ export function UserSessionBar({
           <div className="hidden md:flex items-center gap-2 text-amber-50">
             <span className="text-sm">Welcome,</span>
             <span className="text-sm font-semibold">
-              {session?.user?.firstName} {session?.user?.lastName}
+              {session?.user?.username}
             </span>
           </div>
           <div className="md:hidden text-amber-50 text-sm font-semibold">
-            {session?.user?.firstName}
+            {session?.user?.username}
           </div>
           <Button 
             onClick={handleLogout}

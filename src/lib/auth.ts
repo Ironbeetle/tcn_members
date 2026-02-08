@@ -67,6 +67,7 @@ export const authOptions: NextAuthOptions = {
             id: authRecord.fnmemberId,
             email: authRecord.email,
             name: `${authRecord.fnmember.first_name} ${authRecord.fnmember.last_name}`,
+            username: authRecord.username,
             firstName: authRecord.fnmember.first_name,
             lastName: authRecord.fnmember.last_name,
             tNumber: authRecord.fnmember.t_number,
@@ -112,6 +113,7 @@ export const authOptions: NextAuthOptions = {
             id: authRecord.fnmemberId,
             email: authRecord.email,
             name: `${authRecord.fnmember.first_name} ${authRecord.fnmember.last_name}`,
+            username: authRecord.username,
             firstName: authRecord.fnmember.first_name,
             lastName: authRecord.fnmember.last_name,
             tNumber: authRecord.fnmember.t_number,
@@ -137,6 +139,7 @@ export const authOptions: NextAuthOptions = {
       // Persist user data to the token right after signin
       if (user) {
         token.id = user.id;
+        token.username = user.username;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
         token.tNumber = user.tNumber;
@@ -149,6 +152,7 @@ export const authOptions: NextAuthOptions = {
       // Send properties to the client
       if (token && session.user) {
         session.user.id = token.id as string;
+        session.user.username = token.username as string;
         session.user.firstName = token.firstName as string;
         session.user.lastName = token.lastName as string;
         session.user.tNumber = token.tNumber as string;
