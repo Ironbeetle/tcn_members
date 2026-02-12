@@ -6,6 +6,7 @@
  */
 
 import { NextRequest } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { 
   validateApiKey, 
@@ -149,6 +150,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       WHERE "sourceId" = ${id}
     `;
 
+    // Revalidate bulletin board cache
+    revalidatePath('/TCN_BulletinBoard');
+    
     logApiAccess(request, 'comm:bulletin:PATCH', true, { bulletinId: id });
 
     return apiSuccess({

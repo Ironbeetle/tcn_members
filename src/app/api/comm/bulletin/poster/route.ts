@@ -55,29 +55,38 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes);
     await writeFile(filePath, buffer);
 
-    // Generate URL
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tataskweyak.com';
-    const posterUrl = `${baseUrl}/bulletinboard/${filename}`;
+    // Generate URL - use relative path for consistency with sync/poster
+    const posterUrl = `/bulletinboard/${filename}`;
 
-    // Only update if bulletin exists (poster may be uploaded before bulletin creation)
-    const existingBulletin = await prisma.comm_BulletinApiLog.findUnique({
+    // Try to update the bulletin if it exists in comm_BulletinApiLog
+    const existingApiLogBulletin = await prisma.comm_BulletinApiLog.findUnique({
       where: { id: sourceId }
     });
     
-    if (existingBulletin) {
+    if (existingApiLogBulletin) {
       await prisma.comm_BulletinApiLog.update({
         where: { id: sourceId },
         data: { poster_url: posterUrl }
       });
-
-      // Also update the portal bulletin
-      await prisma.bulletin.updateMany({
-        where: { sourceId },
-        data: { poster_url: posterUrl }
-      });
     }
 
-    logApiAccess(request, 'comm:bulletin:poster:POST', true, { sourceId, filename });
+    // Always try to update the portal bulletin - this handles cases where
+    // the bulletin was synced but poster upload came later
+    const portalBulletinUpdated = await prisma.bulletin.updateMany({
+      where: { sourceId },
+      data: { poster_url: posterUrl }
+    });
+
+    // If neither bulletin exists yet, the calling app should ensure the bulletin
+    // is created/synced with this poster_url. Log this for debugging.
+    const bulletinFound = existingApiLogBulletin || portalBulletinUpdated.count > 0;
+    
+    logApiAccess(request, 'comm:bulletin:poster:POST', true, { 
+      sourceId, 
+      filename,
+      bulletinFound,
+      portalUpdated: portalBulletinUpdated.count > 0
+    });
 
     return apiSuccess({
       poster_url: posterUrl,

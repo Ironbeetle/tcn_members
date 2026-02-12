@@ -35,6 +35,12 @@ export default function AccountActivatePage() {
   const router = useRouter()
   const [step, setStep] = useState<"profile" | "family">("profile")
 
+  // Guard: Redirect already-activated users to home
+  if (status === "authenticated" && session?.user?.activated === "ACTIVATED") {
+    router.push("/TCN_Home")
+    return null
+  }
+
   const { register: registerProfile, handleSubmit: handleSubmitProfile, formState: { errors: profileErrors } } = useForm<ProfileFormData>()
   const { register: registerFamily, handleSubmit: handleSubmitFamily, formState: { errors: familyErrors } } = useForm<FamilyFormData>({
     defaultValues: { dependents: 0 }

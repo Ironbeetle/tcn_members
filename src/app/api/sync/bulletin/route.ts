@@ -8,6 +8,7 @@
  */
 
 import { NextRequest } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { 
   validateApiKey, 
@@ -48,13 +49,31 @@ export async function POST(request: NextRequest) {
 
     const data = validation.data;
 
+    // If no poster_url provided, check if a poster file already exists for this sourceId
+    // This handles race conditions where poster was uploaded before bulletin metadata
+    let finalPosterUrl = data.poster_url;
+    if (!finalPosterUrl || finalPosterUrl === '') {
+      const path = await import('path');
+      const { existsSync, readdirSync } = await import('fs');
+      const posterDir = path.join(process.cwd(), 'public', 'bulletinboard');
+      
+      if (existsSync(posterDir)) {
+        const files = readdirSync(posterDir);
+        const posterFile = files.find(f => f.startsWith(data.sourceId));
+        if (posterFile) {
+          finalPosterUrl = `/bulletinboard/${posterFile}`;
+        }
+      }
+    }
+
     // Upsert - create or update based on sourceId
     const bulletin = await prisma.bulletin.upsert({
       where: { sourceId: data.sourceId },
       update: {
         title: data.title,
         subject: data.subject,
-        poster_url: data.poster_url,
+        poster_url: finalPosterUrl || null,
+        content: data.content || null,
         category: data.category,
         userId: data.userId,
         updated: new Date(),
@@ -63,13 +82,17 @@ export async function POST(request: NextRequest) {
         sourceId: data.sourceId,
         title: data.title,
         subject: data.subject,
-        poster_url: data.poster_url,
+        poster_url: finalPosterUrl || null,
+        content: data.content || null,
         category: data.category,
         userId: data.userId,
         created: data.created ? new Date(data.created) : new Date(),
       },
     });
 
+    // Revalidate the bulletin board page cache
+    revalidatePath('/TCN_BulletinBoard');
+    
     logApiAccess(request, 'bulletin:POST', true, { bulletinId: bulletin.id, sourceId: data.sourceId });
     return apiSuccess(bulletin, 'Bulletin synced successfully');
 

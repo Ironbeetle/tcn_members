@@ -18,10 +18,11 @@ export const categoriesSchema = z.enum([
 
 // Bulletin sync schema - for receiving bulletins from messaging app
 export const bulletinSyncSchema = z.object({
-  sourceId: z.string().cuid(),           // The BulletinApiLog.id from messaging app
+  sourceId: z.string().min(1),            // The BulletinApiLog.id from messaging app (UUID or CUID)
   title: z.string().min(1),
   subject: z.string().min(1),
-  poster_url: z.string().min(1),          // URL/path where poster will be saved
+  poster_url: z.string().optional().default(''), // URL/path for poster bulletins
+  content: z.string().optional(),         // Text content for text bulletins
   category: categoriesSchema.default('CHIEFNCOUNCIL'),
   userId: z.string().optional(),          // User who created it in messaging app
   created: z.string().datetime().or(z.date()).optional(),
@@ -30,17 +31,18 @@ export const bulletinSyncSchema = z.object({
 
 // For updating existing bulletins
 export const bulletinUpdateSchema = z.object({
-  sourceId: z.string().cuid(),            // Required to identify which bulletin
+  sourceId: z.string().min(1),            // Required to identify which bulletin (UUID or CUID)
   title: z.string().min(1).optional(),
   subject: z.string().min(1).optional(),
   poster_url: z.string().min(1).optional(),
+  content: z.string().optional(),         // Text content for text bulletins
   category: categoriesSchema.optional(),
 });
 
 // For deleting bulletins
 export const bulletinDeleteSchema = z.object({
-  sourceId: z.string().cuid().optional(),
-  id: z.string().cuid().optional(),
+  sourceId: z.string().min(1).optional(),
+  id: z.string().min(1).optional(),
 }).refine(data => data.sourceId || data.id, {
   message: 'Either sourceId or id must be provided',
 });
@@ -58,7 +60,7 @@ export const bulletinBatchSyncSchema = z.object({
 
 // Poster upload metadata
 export const posterUploadSchema = z.object({
-  sourceId: z.string().cuid(),            // BulletinApiLog.id this poster belongs to
+  sourceId: z.string().min(1),            // BulletinApiLog.id this poster belongs to (UUID or CUID)
   filename: z.string().min(1),            // Original filename
   contentType: z.string().regex(/^image\/(jpeg|jpg|png|gif|webp)$/i, {
     message: 'Only image files (jpeg, png, gif, webp) are allowed',

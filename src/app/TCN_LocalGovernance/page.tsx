@@ -159,7 +159,7 @@ function CouncilMemberCard({ member, isChief = false }: { member: CouncilMember;
         </div>
       </div>
 
-      {/* Portfolios always visible */}
+      {/* TODO: Portfolios temporarily hidden until accurately named and assigned
       <div className="p-4 border-b border-stone-100">
         <div className="flex items-center gap-2 mb-2">
           <Briefcase className="w-4 h-4 text-amber-700" />
@@ -184,6 +184,7 @@ function CouncilMemberCard({ member, isChief = false }: { member: CouncilMember;
           )}
         </div>
       </div>
+      */}
 
       {/* Expanded Content */}
       {isExpanded && (
@@ -386,24 +387,24 @@ export default function TCNLocalGovernancePage() {
               {selectedBulletin.poster_url ? (
                 (() => {
                   const u = selectedBulletin.poster_url || '';
-                  // Normalize: extract path from full URLs
-                  const normalize = (url: string) => {
+                  // Convert stored poster path to API route for dynamic serving
+                  const getPosterUrl = (url: string) => {
                     if (!url) return '';
+                    let filename = '';
                     if (url.startsWith('http://') || url.startsWith('https://')) {
                       try {
                         const urlObj = new URL(url);
-                        return urlObj.pathname;
+                        filename = urlObj.pathname.split('/').pop() || '';
                       } catch {
-                        const match = url.match(/https?:\/\/[^\/]+(\/.*)/);
-                        return match ? match[1] : url;
+                        const match = url.match(/\/([^\/]+)$/);
+                        filename = match ? match[1] : '';
                       }
+                    } else {
+                      filename = url.split('/').pop() || '';
                     }
-                    let cleaned = url.replace(/^file:\/\//, '');
-                    cleaned = cleaned.replace(/^\/?public\//, '');
-                    cleaned = cleaned.replace(/\\/g, '/');
-                    return cleaned.startsWith('/') ? cleaned : `/${cleaned}`;
+                    return filename ? `/api/poster/${filename}` : '';
                   };
-                  const posterSrc = normalize(u);
+                  const posterSrc = getPosterUrl(u);
                   return (
                     <div className="relative w-full bg-stone-100 flex items-center justify-center">
                       <img

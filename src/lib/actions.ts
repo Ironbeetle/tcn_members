@@ -2,6 +2,7 @@
 
 import { PrismaClient } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import {
@@ -220,12 +221,41 @@ export async function createProfile(data: ProfileCreate): Promise<ActionResult<a
   try {
     const validatedData = profileCreateSchema.parse(data);
     
-    const profile = await prisma.profile.create({
-      data: validatedData,
-      include: {
-        fnmember: true,
-      },
-    });
+    // Check if profile already exists for this member to prevent duplicates
+    let profile;
+    if (validatedData.fnmemberId) {
+      const existingProfile = await prisma.profile.findFirst({
+        where: { fnmemberId: validatedData.fnmemberId },
+      });
+      
+      if (existingProfile) {
+        // Update existing profile instead of creating duplicate
+        const { fnmemberId, ...updateData } = validatedData;
+        profile = await prisma.profile.update({
+          where: { id: existingProfile.id },
+          data: updateData,
+          include: {
+            fnmember: true,
+          },
+        });
+      } else {
+        // Create new profile
+        profile = await prisma.profile.create({
+          data: validatedData,
+          include: {
+            fnmember: true,
+          },
+        });
+      }
+    } else {
+      // No fnmemberId provided, create normally
+      profile = await prisma.profile.create({
+        data: validatedData,
+        include: {
+          fnmember: true,
+        },
+      });
+    }
 
     revalidatePath("/profiles");
     return { success: true, data: profile };
@@ -429,12 +459,41 @@ export async function createFamily(data: FamilyCreate): Promise<ActionResult<any
   try {
     const validatedData = familyCreateSchema.parse(data);
     
-    const family = await prisma.family.create({
-      data: validatedData,
-      include: {
-        fnmember: true,
-      },
-    });
+    // Check if family already exists for this member to prevent duplicates
+    let family;
+    if (validatedData.fnmemberId) {
+      const existingFamily = await prisma.family.findFirst({
+        where: { fnmemberId: validatedData.fnmemberId },
+      });
+      
+      if (existingFamily) {
+        // Update existing family instead of creating duplicate
+        const { fnmemberId, ...updateData } = validatedData;
+        family = await prisma.family.update({
+          where: { id: existingFamily.id },
+          data: updateData,
+          include: {
+            fnmember: true,
+          },
+        });
+      } else {
+        // Create new family
+        family = await prisma.family.create({
+          data: validatedData,
+          include: {
+            fnmember: true,
+          },
+        });
+      }
+    } else {
+      // No fnmemberId provided, create normally
+      family = await prisma.family.create({
+        data: validatedData,
+        include: {
+          fnmember: true,
+        },
+      });
+    }
 
     revalidatePath("/families");
     return { success: true, data: family };
@@ -813,6 +872,9 @@ export async function getBulletin(id: string): Promise<ActionResult<any>> {
 }
 
 export async function queryBulletins(params: Partial<BulletinQuery> = {}): Promise<ActionResult<any>> {
+  // Prevent Next.js from caching this response - bulletins change frequently
+  noStore();
+  
   try {
     const validatedParams = bulletinQuerySchema.parse(params);
     const { page, limit, sortBy, sortOrder, category, searchTerm } = validatedParams;
@@ -1008,17 +1070,28 @@ export async function uploadProfileImage(memberId: string, formData: FormData): 
     const imagePath = path.join(memberDir, 'avatar.jpg');
     await writeFile(imagePath, processedImage);
 
-    // Update database with image URL
+    // Update or create profile record with image URL
     const imageUrl = `/profiles/${memberId}/avatar.jpg?t=${Date.now()}`;
-    
-    await prisma.profile.updateMany({
-      where: {
-        fnmemberId: memberId
-      },
-      data: {
-        image_url: imageUrl
-      }
-    });
+
+    const existingProfile = await prisma.profile.findFirst({ where: { fnmemberId: memberId } });
+    if (existingProfile) {
+      await prisma.profile.update({
+        where: { id: existingProfile.id },
+        data: { image_url: imageUrl }
+      });
+    } else {
+      await prisma.profile.create({
+        data: {
+          fnmemberId: memberId,
+          image_url: imageUrl,
+          o_r_status: 'On Reserve',
+          community: '',
+          address: '',
+          phone_number: '',
+          email: ''
+        }
+      });
+    }
 
     revalidatePath('/Member_Account');
 

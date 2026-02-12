@@ -83,35 +83,47 @@ async function processFnmemberSync(item: SyncItem) {
       });
       
       // Process nested Profile if provided (as per VPS_SYNC_REFERENCE.md)
+      // Find by fnmemberId first to prevent duplicates when IDs differ between systems
       const rawData = item.data as any;
       if (rawData.profile) {
         const profileData = rawData.profile;
-        await prisma.profile.upsert({
-          where: { id: profileData.id },
-          create: {
-            id: profileData.id,
-            gender: profileData.gender,
-            o_r_status: profileData.o_r_status,
-            community: profileData.community,
-            address: profileData.address,
-            phone_number: profileData.phone_number,
-            email: profileData.email,
-            image_url: profileData.image_url,
-            fnmemberId: member.id,
-            created: profileData.created ? new Date(profileData.created) : new Date(),
-            updated: profileData.updated ? new Date(profileData.updated) : new Date(),
-          },
-          update: {
-            gender: profileData.gender,
-            o_r_status: profileData.o_r_status,
-            community: profileData.community,
-            address: profileData.address,
-            phone_number: profileData.phone_number,
-            email: profileData.email,
-            image_url: profileData.image_url,
-            updated: new Date(),
-          },
+        const existingProfile = await prisma.profile.findFirst({
+          where: { fnmemberId: member.id }
         });
+        
+        if (existingProfile) {
+          // Update existing profile
+          await prisma.profile.update({
+            where: { id: existingProfile.id },
+            data: {
+              gender: profileData.gender,
+              o_r_status: profileData.o_r_status,
+              community: profileData.community,
+              address: profileData.address,
+              phone_number: profileData.phone_number,
+              email: profileData.email,
+              image_url: profileData.image_url,
+              updated: new Date(),
+            },
+          });
+        } else {
+          // Create new profile
+          await prisma.profile.create({
+            data: {
+              id: profileData.id,
+              gender: profileData.gender,
+              o_r_status: profileData.o_r_status,
+              community: profileData.community,
+              address: profileData.address,
+              phone_number: profileData.phone_number,
+              email: profileData.email,
+              image_url: profileData.image_url,
+              fnmemberId: member.id,
+              created: profileData.created ? new Date(profileData.created) : new Date(),
+              updated: profileData.updated ? new Date(profileData.updated) : new Date(),
+            },
+          });
+        }
       }
       
       // Process nested Barcode if provided (as per VPS_SYNC_REFERENCE.md)
@@ -207,33 +219,46 @@ async function processProfileSync(item: SyncItem) {
     case 'CREATE':
     case 'UPSERT': {
       const data = profileSyncSchema.parse(item.data);
-      const profile = await prisma.profile.upsert({
-        where: { id: data.id },
-        create: {
-          id: data.id,
-          gender: data.gender,
-          o_r_status: data.o_r_status,
-          community: data.community,
-          address: data.address,
-          phone_number: data.phone_number,
-          email: data.email,
-          image_url: data.image_url,
-          fnmemberId: data.fnmemberId,
-          created: new Date(data.created),
-          updated: new Date(data.updated),
-        },
-        update: {
-          gender: data.gender,
-          o_r_status: data.o_r_status,
-          community: data.community,
-          address: data.address,
-          phone_number: data.phone_number,
-          email: data.email,
-          image_url: data.image_url,
-          fnmemberId: data.fnmemberId,
-          updated: new Date(),
-        },
-      });
+      
+      // Find by fnmemberId first to prevent duplicates when IDs differ between systems
+      const existingProfile = data.fnmemberId 
+        ? await prisma.profile.findFirst({ where: { fnmemberId: data.fnmemberId } })
+        : null;
+      
+      let profile;
+      if (existingProfile) {
+        // Update existing profile
+        profile = await prisma.profile.update({
+          where: { id: existingProfile.id },
+          data: {
+            gender: data.gender,
+            o_r_status: data.o_r_status,
+            community: data.community,
+            address: data.address,
+            phone_number: data.phone_number,
+            email: data.email,
+            image_url: data.image_url,
+            updated: new Date(),
+          },
+        });
+      } else {
+        // Create new profile
+        profile = await prisma.profile.create({
+          data: {
+            id: data.id,
+            gender: data.gender,
+            o_r_status: data.o_r_status,
+            community: data.community,
+            address: data.address,
+            phone_number: data.phone_number,
+            email: data.email,
+            image_url: data.image_url,
+            fnmemberId: data.fnmemberId,
+            created: new Date(data.created),
+            updated: new Date(data.updated),
+          },
+        });
+      }
       return { success: true, data: profile };
     }
     

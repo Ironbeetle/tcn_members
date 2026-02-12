@@ -7,6 +7,7 @@
  */
 
 import { NextRequest } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { 
   validateApiKey, 
@@ -164,6 +165,9 @@ export async function POST(request: NextRequest) {
         updated = NOW()
     `;
 
+    // Revalidate bulletin board cache
+    revalidatePath('/TCN_BulletinBoard');
+    
     logApiAccess(request, 'comm:bulletin:POST', true, { bulletinId: bulletin.id });
 
     return apiSuccess({

@@ -447,14 +447,9 @@ export default function TCNFormsPage() {
                   {isEditMode ? <Edit3 className="w-6 h-6 text-white" /> : <FileText className="w-6 h-6 text-white" />}
                   <div>
                     <h2 className="text-lg font-bold text-white">{selectedForm.title}</h2>
-                    <div className="flex items-center gap-2">
-                      {selectedForm.created_by && (
-                        <span className="text-xs text-amber-200">by {selectedForm.created_by}</span>
-                      )}
-                      {isEditMode && (
-                        <span className="text-xs bg-white/20 px-2 py-0.5 rounded text-white">Edit Mode</span>
-                      )}
-                    </div>
+                    {isEditMode && (
+                      <span className="text-xs bg-white/20 px-2 py-0.5 rounded text-white">Edit Mode</span>
+                    )}
                   </div>
                 </div>
                 <button
@@ -871,12 +866,6 @@ export default function TCNFormsPage() {
                                   <div className="flex items-center gap-1.5 text-stone-500">
                                     <Users className="w-4 h-4" />
                                     <span>{form.submissionCount || 0}/{form.max_entries} spots</span>
-                                  </div>
-                                )}
-                                {form.created_by && (
-                                  <div className="flex items-center gap-1.5 text-stone-500">
-                                    <Info className="w-4 h-4" />
-                                    <span>{form.created_by}</span>
                                   </div>
                                 )}
                               </div>

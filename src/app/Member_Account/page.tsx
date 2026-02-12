@@ -10,7 +10,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { uploadProfileImage, deleteProfileImage, getFnmemberById } from '@/lib/actions';
+import uploadProfileImage from '@/lib/client-actions';
+import { deleteProfileImage, getFnmemberById } from '@/lib/actions';
 import { 
   User, 
   Mail, 

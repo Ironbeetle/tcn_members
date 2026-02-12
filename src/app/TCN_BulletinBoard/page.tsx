@@ -127,8 +127,8 @@ export default function page() {
       return result.data;
     },
     enabled: status === 'authenticated',
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 0, // No client-side cache - server action handles freshness
+    refetchOnWindowFocus: true,
   });
 
   // Extract bulletins from query data
@@ -208,30 +208,32 @@ export default function page() {
                   {selectedBulletin.poster_url ? (
                     (() => {
                       const u = selectedBulletin.poster_url || '';
-                      // Normalize different forms of stored paths to a web-safe URL.
-                      // Extract path from full URLs, strip prefixes, ensure leading slash.
-                      const normalize = (url: string) => {
+                      // Convert stored poster path to API route for dynamic serving
+                      // This bypasses Next.js static file caching issues
+                      const getPosterUrl = (url: string) => {
                         if (!url) return '';
-                        // For full URLs, extract just the pathname
+                        
+                        // Extract filename from various formats
+                        let filename = '';
+                        
                         if (url.startsWith('http://') || url.startsWith('https://')) {
                           try {
                             const urlObj = new URL(url);
-                            return urlObj.pathname;
+                            filename = urlObj.pathname.split('/').pop() || '';
                           } catch {
-                            // If URL parsing fails, try to extract path after domain
-                            const match = url.match(/https?:\/\/[^\/]+(\/.*)/);
-                            return match ? match[1] : url;
+                            const match = url.match(/\/([^\/]+)$/);
+                            filename = match ? match[1] : '';
                           }
+                        } else {
+                          // Handle /bulletinboard/filename.jpg or similar
+                          filename = url.split('/').pop() || '';
                         }
-                        // remove file://, leading public/ or /public/
-                        let cleaned = url.replace(/^file:\/\//, '');
-                        cleaned = cleaned.replace(/^\/?public\//, '');
-                        cleaned = cleaned.replace(/^public\//, '');
-                        cleaned = cleaned.replace(/\\/g, '/');
-                        return cleaned.startsWith('/') ? cleaned : `/${cleaned}`;
+                        
+                        // Use API route to serve image dynamically
+                        return filename ? `/api/poster/${filename}` : '';
                       };
 
-                      const posterSrc = normalize(u);
+                      const posterSrc = getPosterUrl(u);
 
                       return (
                         <img

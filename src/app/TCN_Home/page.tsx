@@ -204,7 +204,7 @@ export default function TCNHomePage() {
             <div className="w-20 h-20 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center mb-3">
               <Users className="w-10 h-10 text-amber-700" />
             </div>
-            <h3 className="font-bold text-lg text-stone-800">{session?.user?.firstName} {session?.user?.lastName}</h3>
+            <h3 className="font-bold text-lg text-stone-800">Account Profile</h3>
             <div className="text-xs text-amber-700 font-medium">View Account →</div>
           </div>
         </Link>
@@ -443,7 +443,7 @@ export default function TCNHomePage() {
                   <Megaphone className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold">Tansi, {session?.user?.firstName}!</h2>
+                  <h2 className="text-lg font-bold">Tansi, {session?.user?.username}!</h2>
                   <p className="text-amber-100 text-xs">Welcome to the Member Portal</p>
                 </div>
               </div>
@@ -483,7 +483,7 @@ export default function TCNHomePage() {
               >
                 <div className="flex items-center gap-4 mb-3">
                   <Megaphone className="w-8 h-8" />
-                  <h2 className="text-2xl font-bold">Tansi, {session?.user?.firstName}!</h2>
+                  <h2 className="text-2xl font-bold">Tansi, {session?.user?.username}!</h2>
                 </div>
                 <p className="text-amber-50">Welcome to the TCN Member Portal.</p>
               </motion.div>
