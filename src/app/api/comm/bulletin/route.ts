@@ -1,7 +1,7 @@
 /**
  * Bulletin API - Manage bulletins from the communications app
  * 
- * Endpoint for the Tauri Communications desktop app to create and manage
+ * Endpoint for the Electron Communications desktop app to create and manage
  * bulletins that sync to the member portal.
  * Uses API key authentication only (no user auth).
  */
@@ -28,7 +28,19 @@ const bulletinSchema = z.object({
   content: z.string().max(10000).optional().nullable(),
   category: z.enum(categories).default('ANNOUNCEMENTS'),
   userId: z.string().optional(), // Staff user ID
+  logoId: z.string().optional(), // Logo ID for letterhead (e.g., 'tcn-main' -> /logos/tcn-main.png)
 });
+
+// Create letterhead HTML for text-only bulletins with logo
+function createLetterheadHtml(logoId: string | undefined): string {
+  if (!logoId) return '';
+  
+  const logoUrl = `/logos/${logoId}.png`;
+  return `<div style="text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #00d9ff;">
+    <img src="${logoUrl}" alt="TCN" style="width: 120px; height: auto; display: block; margin: 0 auto 10px auto;" />
+    <div style="color: #1a1a2e; font-size: 18px; font-weight: bold;">Tataskweyak Cree Nation</div>
+  </div>`;
+}
 
 // GET - List bulletins
 export async function GET(request: NextRequest) {
@@ -116,7 +128,10 @@ export async function POST(request: NextRequest) {
       return apiError('Validation error', 400, validation.error.issues);
     }
 
-    const { title, subject, poster_url, content, category, userId } = validation.data;
+    const { title, subject, poster_url, content, category, userId, logoId } = validation.data;
+
+    // Prepend letterhead to content if logoId is provided
+    const finalContent = content ? createLetterheadHtml(logoId) + content : null;
 
     // Create bulletin in msgmanager schema
     const bulletinResult = await prisma.$queryRaw<any[]>`
@@ -127,7 +142,7 @@ export async function POST(request: NextRequest) {
         gen_random_uuid()::text,
         ${title},
         ${subject},
-        ${content || null},
+        ${finalContent || null},
         ${poster_url || null},
         ${category}::"msgmanager"."Categories",
         ${userId || 'api-user'},
@@ -148,7 +163,7 @@ export async function POST(request: NextRequest) {
         gen_random_uuid()::text,
         ${title},
         ${subject},
-        ${content || null},
+        ${finalContent || null},
         ${poster_url || null},
         ${category}::"tcnbulletin"."Categories",
         ${bulletin.id},

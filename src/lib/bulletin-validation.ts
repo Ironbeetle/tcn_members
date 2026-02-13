@@ -25,6 +25,7 @@ export const bulletinSyncSchema = z.object({
   content: z.string().optional(),         // Text content for text bulletins
   category: categoriesSchema.default('CHIEFNCOUNCIL'),
   userId: z.string().optional(),          // User who created it in messaging app
+  logoId: z.string().optional(),          // Logo ID for letterhead (e.g., 'tcn-main' -> /logos/tcn-main.png)
   created: z.string().datetime().or(z.date()).optional(),
   updated: z.string().datetime().or(z.date()).optional(),
 });
@@ -37,6 +38,7 @@ export const bulletinUpdateSchema = z.object({
   poster_url: z.string().min(1).optional(),
   content: z.string().optional(),         // Text content for text bulletins
   category: categoriesSchema.optional(),
+  logoId: z.string().optional(),          // Logo ID for letterhead
 });
 
 // For deleting bulletins

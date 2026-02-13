@@ -245,11 +245,10 @@ export default function page() {
                     })()
                   ) : selectedBulletin.content ? (
                     <div className="w-full p-6 sm:p-8 bg-gradient-to-br from-amber-50 to-stone-50 min-h-[200px] sm:min-h-[300px] flex items-center justify-center">
-                      <div className="prose prose-lg max-w-none">
-                        <p className="text-lg sm:text-xl leading-relaxed text-stone-700 whitespace-pre-wrap">
-                          {selectedBulletin.content}
-                        </p>
-                      </div>
+                      <div 
+                        className="prose prose-lg max-w-none text-lg sm:text-xl leading-relaxed text-stone-700"
+                        dangerouslySetInnerHTML={{ __html: selectedBulletin.content }}
+                      />
                     </div>
                   ) : (
                   <div className="w-full h-48 sm:h-64 flex flex-col items-center justify-center text-stone-400">

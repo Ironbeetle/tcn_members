@@ -24,6 +24,17 @@ import {
 } from '@/lib/bulletin-validation';
 import { z } from 'zod';
 
+// Create letterhead HTML for text-only bulletins with logo
+function createLetterheadHtml(logoId: string | undefined): string {
+  if (!logoId) return '';
+  
+  const logoUrl = `/logos/${logoId}.png`;
+  return `<div style="text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #00d9ff;">
+    <img src="${logoUrl}" alt="TCN" style="width: 120px; height: auto; display: block; margin: 0 auto 10px auto;" />
+    <div style="color: #1a1a2e; font-size: 18px; font-weight: bold;">Tataskweyak Cree Nation</div>
+  </div>`;
+}
+
 // POST - Create or update bulletin
 export async function POST(request: NextRequest) {
   const authResult = validateApiKey(request);
@@ -49,6 +60,9 @@ export async function POST(request: NextRequest) {
 
     const data = validation.data;
 
+    // Prepend letterhead to content if logoId is provided
+    const finalContent = data.content ? createLetterheadHtml(data.logoId) + data.content : null;
+
     // If no poster_url provided, check if a poster file already exists for this sourceId
     // This handles race conditions where poster was uploaded before bulletin metadata
     let finalPosterUrl = data.poster_url;
@@ -73,7 +87,7 @@ export async function POST(request: NextRequest) {
         title: data.title,
         subject: data.subject,
         poster_url: finalPosterUrl || null,
-        content: data.content || null,
+        content: finalContent,
         category: data.category,
         userId: data.userId,
         updated: new Date(),
@@ -83,7 +97,7 @@ export async function POST(request: NextRequest) {
         title: data.title,
         subject: data.subject,
         poster_url: finalPosterUrl || null,
-        content: data.content || null,
+        content: finalContent,
         category: data.category,
         userId: data.userId,
         created: data.created ? new Date(data.created) : new Date(),
@@ -126,12 +140,14 @@ async function handleBatchSync(request: NextRequest, body: any) {
         case 'CREATE':
         case 'UPSERT': {
           const data = bulletinSyncSchema.parse(item.data);
+          const batchContent = data.content ? createLetterheadHtml(data.logoId) + data.content : null;
           await prisma.bulletin.upsert({
             where: { sourceId: data.sourceId },
             update: {
               title: data.title,
               subject: data.subject,
               poster_url: data.poster_url,
+              content: batchContent,
               category: data.category,
               userId: data.userId,
               updated: new Date(),
@@ -141,6 +157,7 @@ async function handleBatchSync(request: NextRequest, body: any) {
               title: data.title,
               subject: data.subject,
               poster_url: data.poster_url,
+              content: batchContent,
               category: data.category,
               userId: data.userId,
             },
@@ -151,12 +168,14 @@ async function handleBatchSync(request: NextRequest, body: any) {
 
         case 'UPDATE': {
           const updateData = bulletinUpdateSchema.parse(item.data);
+          const updateContent = updateData.content ? createLetterheadHtml(updateData.logoId) + updateData.content : undefined;
           await prisma.bulletin.update({
             where: { sourceId: updateData.sourceId },
             data: {
               ...(updateData.title && { title: updateData.title }),
               ...(updateData.subject && { subject: updateData.subject }),
               ...(updateData.poster_url && { poster_url: updateData.poster_url }),
+              ...(updateContent && { content: updateContent }),
               ...(updateData.category && { category: updateData.category }),
               updated: new Date(),
             },
