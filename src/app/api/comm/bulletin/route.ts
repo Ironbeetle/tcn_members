@@ -31,14 +31,24 @@ const bulletinSchema = z.object({
   logoId: z.string().optional(), // Logo ID for letterhead (e.g., 'tcn-main' -> /logos/tcn-main.png)
 });
 
+// Logo name to organization name mapping
+const logoOrgNames: Record<string, string> = {
+  'tcn-main': 'Tataskweyak Cree Nation',
+  'cscmec-main': 'Chief Sam Cook Mahmuwee Educational Center',
+  'jwhc-main': 'John Wavey Health Center',
+};
+
 // Create letterhead HTML for text-only bulletins with logo
 function createLetterheadHtml(logoId: string | undefined): string {
   if (!logoId) return '';
   
   const logoUrl = `/logos/${logoId}.png`;
-  return `<div style="text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #00d9ff;">
-    <img src="${logoUrl}" alt="TCN" style="width: 120px; height: auto; display: block; margin: 0 auto 10px auto;" />
-    <div style="color: #1a1a2e; font-size: 18px; font-weight: bold;">Tataskweyak Cree Nation</div>
+  const orgName = logoOrgNames[logoId] || 'Tataskweyak Cree Nation';
+  return `<div class="w-full h-auto mb-5 pb-4 border-b-2 border-cyan-400">
+    <div class="flex flex-row items-center justify-center gap-4">
+      <img src="${logoUrl}" alt="${orgName}" class="w-[120px] h-auto" />
+      <span class="text-slate-800 text-lg font-bold">${orgName}</span>
+    </div>
   </div>`;
 }
 
