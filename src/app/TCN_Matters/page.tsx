@@ -1,7 +1,6 @@
 "use client"
 
 import { Backbtn } from "@/components/Backbtn"
-import { Hamburger } from "@/components/Hamburger"
 import { useState, useEffect } from "react"
 
 const sections = [
@@ -42,13 +41,6 @@ export default function TCN_Matters() {
     }
   }
 
-  const menuItems = [
-    { label: "About Tataskweyak", to: "/pages/AboutTCN", color: "stone" as const },
-    { label: "About Who We Are", to: "/pages/WorldViewHome", color: "stone" as const },
-    { label: "Photo Gallery", to: "/pages/PhotoGallery", color: "stone" as const },
-    { label: "Home", to: "/", color: "stone" as const },
-  ]
-
   const DesktopNav = () => (
     <div className="hidden lg:block">
       <div className="bg-amber-900 backdrop-blur-sm border-b border-amber-600/50">
@@ -78,7 +70,14 @@ export default function TCN_Matters() {
     <div className="w-full min-h-screen genbkg">
       {/* Navigation */}
       <div className="fixed top-0 z-50 w-full">
-        <Hamburger menuItems={menuItems} showBackButton={true} />
+        <div className="lg:hidden bg-amber-900 backdrop-blur-sm border-b border-amber-600/50">
+          <div className="flex items-center px-4 h-14">
+            <div className="w-[20vw]">
+              <Backbtn />
+            </div>
+            <div className="flex-1" />
+          </div>
+        </div>
         <DesktopNav />
       </div>
 

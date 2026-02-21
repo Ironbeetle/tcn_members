@@ -1,6 +1,5 @@
 'use client'
 import { Backbtn } from "@/components/Backbtn"
-import { Hamburger } from "@/components/Hamburger"
 import { motion } from "framer-motion"
 import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -12,9 +11,6 @@ import { useRouter } from "next/navigation"
 export default function TCN_Enter() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<string>("login")
-  const menuItems = [
-    { label: "Home", to: "/", color: "stone" as const },
-  ]
 
   // Desktop Navigation
   const DesktopNav = () => (
@@ -39,7 +35,14 @@ export default function TCN_Enter() {
     <div className="w-full min-h-screen genbkg">
         {/* Navigation */}
         <div className="fixed top-0 z-100 w-full">
-            <Hamburger menuItems={menuItems} showBackButton={true} />
+        <div className="lg:hidden bg-amber-900 backdrop-blur-sm border-b border-amber-600/50">
+          <div className="flex items-center px-4 h-14">
+            <div className="w-[20vw]">
+              <Backbtn />
+            </div>
+            <div className="flex-1" />
+          </div>
+        </div>
             <DesktopNav />
         </div>
         <div className="w-full h-[10vh] lg:h-[10vh]"/>

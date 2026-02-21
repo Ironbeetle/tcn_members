@@ -5,10 +5,10 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { useMutation } from "@tanstack/react-query"
+import { Backbtn } from "@/components/Backbtn"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { Hamburger } from "@/components/Hamburger"
 import { UserSessionBar } from "@/components/UserSessionBar"
 import { createProfile, createFamily } from "@/lib/actions"
 import { toast } from "sonner"
@@ -115,10 +115,6 @@ export default function AccountActivatePage() {
 
   const isLoading = profileMutation.isPending || familyMutation.isPending || activationMutation.isPending
 
-  const menuItems = [
-    { label: "Home", to: "/", color: "stone" as const },
-  ]
-
   if (status === "loading") {
     return (
       <div className="w-full min-h-screen genbkg flex items-center justify-center">
@@ -150,8 +146,13 @@ export default function AccountActivatePage() {
     <div className="w-full min-h-screen genbkg">
       {/* Navigation with user info and logout */}
       <div className="sticky top-0 z-50">
-        <div className="lg:hidden">
-          <Hamburger menuItems={menuItems} showBackButton={false} />
+        <div className="lg:hidden bg-amber-900 backdrop-blur-sm border-b border-amber-600/50">
+          <div className="flex items-center px-4 h-14">
+            <div className="w-[20vw]">
+              <Backbtn />
+            </div>
+            <div className="flex-1" />
+          </div>
         </div>
         <UserSessionBar showLogo={true} />
       </div>
