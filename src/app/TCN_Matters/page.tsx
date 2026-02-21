@@ -103,25 +103,6 @@ export default function TCN_Matters() {
         </div>
       </nav>
 
-      {/* Mobile Section Navigation - Horizontal scroll */}
-      <div className="lg:hidden fixed top-14 left-0 right-0 z-40 bg-stone-800/95 backdrop-blur-sm border-b border-amber-600/30 overflow-x-auto hide-scrollbar">
-        <div className="flex gap-2 p-2 min-w-max">
-          {sections.map((section) => (
-            <button
-              key={section.id}
-              onClick={() => scrollToSection(section.id)}
-              className={`px-3 py-1.5 rounded-md text-xs whitespace-nowrap transition-all ${
-                activeSection === section.id
-                  ? "bg-amber-700 text-white font-semibold"
-                  : "text-amber-100/80 bg-stone-700/50"
-              }`}
-            >
-              {section.shortTitle}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Spacer for fixed nav */}
       <div className="h-16 lg:h-16" />
       <div className="h-12 lg:hidden" />
