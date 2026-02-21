@@ -96,7 +96,7 @@ function page() {
 
       {/* MAIN CONTENT - TCN Sys Intro */}
       <section className="relative w-full pt-8 lg:pt-[8%] flex flex-col items-center justify-center px-4 lg:px-6">
-        <div className="w-full max-w-7xl mx-auto">
+        <div className="w-full lg:p-6 mx-auto">
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
@@ -157,7 +157,7 @@ function page() {
           </div>
         </div>
         <div className="h-[5px] w-full bg-amber-900 backdrop-blur-sm border-b border-amber-600/50 mt-12 mb-12"/>
-        <div className="w-full max-w-7xl mx-auto">
+        <div className="w-full lg:p-6 mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-5 w-full mt-6 mb-6">
             <div className="col-span-3 flex flex-col justify-start items-start p-0 lg:p-2">
               <motion.div 
@@ -304,7 +304,7 @@ function page() {
           </div>
         </div>
         <div className="h-[5px] w-full bg-amber-900 backdrop-blur-sm border-b border-amber-600/50 mt-12 mb-12"/>
-        <div className="w-full max-w-7xl mx-auto">
+        <div className="w-full lg:p-6 mx-auto">
         <motion.div 
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
@@ -381,7 +381,7 @@ function page() {
         </div>
         <div className="h-[5px] w-full bg-amber-900 backdrop-blur-sm border-b border-amber-600/50 mt-12 mb-12"/>
         <div className="h-[2vh] lg:h-[5vh] w-full"/>
-        <div className="w-full max-w-7xl mx-auto">
+        <div className="w-full lg:p-6 mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 w-full mb-6">
             <div>
               <motion.div 
@@ -464,7 +464,7 @@ function page() {
           </div>
         </div>
         <div className="h-[5vh] lg:h-[15vh] w-full"/>
-        <div className="w-full max-w-7xl mx-auto">
+        <div className="w-full lg:p-6 mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 w-full mt-6 mb-6">
             <div>
               <motion.div 
@@ -518,7 +518,7 @@ function page() {
         </div>
         <div className="h-[5px] w-full bg-amber-900 backdrop-blur-sm border-b border-amber-600/50 mt-12 mb-12"/>
 
-        <div className="w-full max-w-7xl mx-auto">
+        <div className="w-full lg:p-6 mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 w-full mt-6 mb-6">
             <div>
               <motion.div 
@@ -665,7 +665,7 @@ function page() {
           </div>
         </div>
         <div className="hidden lg:block h-[5px] w-full bg-amber-900 backdrop-blur-sm border-b border-amber-600/50 mt-12 mb-12"/>
-        <div className="w-full max-w-7xl mx-auto">
+        <div className="w-full lg:p-6 mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 w-full mt-6 mb-6">
             <div className="flex flex-col justify-center items-start p-4">
               <motion.div 
@@ -680,10 +680,10 @@ function page() {
                 whileInView={{ opacity: 1 }}
                 transition={{ duration: 0.5 , delay: 0.1 ,ease: "easeInOut"}}
                 className="techtxtmb w-full mt-6 mb-6">
-                When the system launches:
+                System is now live and can accept account activations. Here's how it works:
               </motion.div>
               <motion.ul
-                    className="flex flex-col justify-start items-start p-1 lg:p-6"
+                    className="flex flex-col justify-start items-start p-1 lg:p-8"
                     initial="hidden"
                     whileInView="show"
                     viewport={{ once: true, amount: 0.2 }}
@@ -703,7 +703,7 @@ function page() {
                     }}
                     >
                   <span className="techtxtmb">
-                    TCN admin will register each member into the database.
+                    TCN admin has entered each member into the Master database.
                   </span>
                 </motion.li>
                 <motion.li
@@ -714,7 +714,7 @@ function page() {
                     }}
                     >
                   <span className="techtxtmb">
-                    Each member will be assigned a unique barcode ID.
+                    Each TCN member has been assigned a unique barcode ID.
                   </span>
                 </motion.li>
                 <motion.li
@@ -725,7 +725,31 @@ function page() {
                     }}
                     >
                   <span className="techtxtmb">
-                    To activate your account, you will log in with your treaty number and birth date.
+                    You must be 18 years of age, or older to activate your account.
+                  </span>
+                </motion.li>
+                <motion.li
+                    className="techtxtmb list-disc list-inside mb-4"
+                    variants={{
+                      hidden: { opacity: 0, y: 12 },
+                      show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeInOut" } },
+                    }}
+                    >
+                  <span className="techtxtmb">
+                    To activate your account, you enter your treaty number and birth date.<br/><br/> 
+                    The 10 digit teaty number and date must match exactly or account activation process
+                     will be terminated.
+                  </span>
+                </motion.li>
+                <motion.li
+                    className="techtxtmb list-disc list-inside mb-4"
+                    variants={{
+                      hidden: { opacity: 0, y: 12 },
+                      show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeInOut" } },
+                    }}
+                    >
+                  <span className="techtxtmb">
+                    When you have a match, just follow the setup instructions to activate your account.
                   </span>
                 </motion.li>
               </motion.ul>
@@ -759,8 +783,8 @@ function page() {
                 whileInView={{ opacity: 1 }}
                 transition={{ duration: 0.5 , delay: 0.2 ,ease: "easeInOut"}}
                 className="techtxtmb mt-12">
-                You can then update your contact info, 
-                and download your barcode ID to your app.
+                When using this app on a mobile phone, you can use your phone's 
+                fingerprint authentication feature to log into your account.
               </motion.div>
               <motion.div 
                 initial={{ opacity: 0 }}
@@ -786,7 +810,7 @@ function page() {
         </div>
 
         <div className="h-[5px] w-full bg-amber-900 backdrop-blur-sm border-b border-amber-600/50 mt-12 mb-12"/>
-        <div className="w-full max-w-7xl mx-auto">
+        <div className="w-full lg:p-6 mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 w-full mt-6 mb-6">
             <div className="flex flex-col justify-start items-start p-6">
               <motion.div 
@@ -928,7 +952,7 @@ function page() {
           </div>
         </div>
         {/* skills viewer desktop */}
-        <div className="hidden lg:block w-full max-w-7xl mx-auto">
+        <div className="hidden lg:block w-full lg:p-6 mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-3 w-full mt-6 mb-6">
             <div className="flex justify-center items-center p-6">
               <motion.img
@@ -972,7 +996,7 @@ function page() {
               transition={{ duration: 0.5 }}
               className="block lg:hidden w-full"
           >
-            <Carousel className="w-full max-w-5xl mx-auto">
+            <Carousel className="w-full lg:p-6 mx-auto">
               <CarouselContent>
                 <CarouselItem className="md:basis-1/1">
                     <div className="w-full aspect-[3/2] sm:aspect-[4/3] md:aspect-[16/9] p-1 sm:p-2">
@@ -1022,7 +1046,7 @@ function page() {
               </div>
             </Carousel>
           </motion.div>
-      <div className="w-full max-w-7xl mx-auto">
+      <div className="w-full lg:p-6 mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-5 w-full mt-6 mb-6">
           <div className="col-span-3 flex flex-col justify-center items-start">
             <motion.div 
