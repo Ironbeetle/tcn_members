@@ -1,18 +1,19 @@
-'use client'
+"use client"
+
 import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
 
 export const Backbtn = () => {
-    const router = useRouter();
-    return(
-        <>
-            <div 
-                onClick={() => router.back()} 
-                className='h-full cursor-pointer'
-            >
-                <div className='flex flex-col justify-center h-full navlink apptextmini'>
-                    Back
-                </div>
-            </div>
-        </>
+    const router = useRouter()
+
+    return (
+        <Button
+            onClick={() => router.back()}
+            variant="outline"
+            className="bg-amber-700 hover:bg-amber-800 text-white border-amber-600"
+            size="sm"
+        >
+            Back
+        </Button>
     )
 }
