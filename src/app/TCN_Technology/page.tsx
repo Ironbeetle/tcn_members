@@ -507,7 +507,7 @@ export default function TCN_Technology() {
                   <span className="text-amber-300 font-semibold">Join Our Team</span>
                 </div>
                 <h3 className="text-heading font-bold text-white mb-3">Skills We Need</h3>
-                <p className="text-stone-400 text-body max-w-2xl mx-auto">
+                <p className="text-stone-100 text-body max-w-2xl mx-auto">
                   This is our own custom-built system. To bring it to its full potential, 
                   we need TCN members with skills in these areas:
                 </p>
