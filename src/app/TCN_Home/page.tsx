@@ -364,7 +364,7 @@ export default function TCNHomePage() {
       )
     },
     {
-      id: 'Community Matters',
+      id: 'TCN_Matters',
       type: 'link',
       link: '/TCN_Matters',
       gradient: 'from-orange-700 to-orange-900',
@@ -390,13 +390,26 @@ export default function TCNHomePage() {
       )
     },
     {
-      id: 'healing',
-      gradient: 'from-green-700 to-green-900',
-      icon: Heart,
-      title: 'Community Healing',
-      description: 'Supporting wellness, mental health, and traditional healing practices in our community.',
-      badge: 'Coming soon: Resources, support services, and healing circle information',
-      badgeTextColor: 'text-green-100'
+      id: 'TCN_Technology',
+      type: 'link',
+      link: '/TCN_Technology',
+      title: 'Tataskweyak Technology',
+      description: 'Supporting innovation and technological development in our community.',
+      content: (
+        <div className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group">
+          <div className="relative h-36 sm:h-48 bg-gradient-to-br from-amber-100 to-amber-200 overflow-hidden">
+            <img src="/systemintro.jpg" alt="Bulletin Board" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+            <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4">
+              <h3 className="text-white text-lg sm:text-xl font-bold mb-1">Tataskweyak Technology</h3> 
+            </div>
+          </div>
+          <div className="p-3 sm:p-4 flex items-center justify-between">
+            <span className="text-stone-600 font-medium text-sm sm:text-base">View</span>
+            <span className="text-amber-700 font-bold">→</span>
+          </div>
+        </div>
+      )
     },
     {
       id: 'learning',
