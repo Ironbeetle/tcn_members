@@ -156,7 +156,7 @@ export default function TCN_Enter() {
                           Please enter your 10 digit Treaty number to activate your account. Once entered, your Treaty number will be locked and your Barcode number will then serve as your identifier in the system.
                         </p>
                         <p>
-                          If you need assistance with registration, please send an email with your full name and birth date, and we will find out what is happening.
+                          If you need assistance with registration, please send an email with your full name and birth date, and we will find out what is happening, and get back to you.
                         </p>
                         <div className="mt-1">
                           <SheetTrigger asChild>
