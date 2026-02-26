@@ -111,7 +111,7 @@ export default function TCN_Enter() {
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 justify-center items-center p-1 h-[45%]">
                         <div style={{ fontSize: 'clamp(0.95rem, 1.6vw, 1.25rem)', lineHeight: '1.6' }}>
                           
-                            Please enter your Treaty number to activate your account. Once entered, your Treaty number will be locked and your Barcode number will then serve as your identifier in the system.
+                            Please enter your 10 digit Treaty number to activate your account. Once entered, your Treaty number will be locked and your Barcode number will then serve as your identifier in the system.
                          
                         </div>
                         <motion.img
