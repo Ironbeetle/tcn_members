@@ -24,9 +24,9 @@ export function FingerprintLogin({
   const authenticateMutation = useAuthenticateWithFingerprint()
   const [error, setError] = useState<string>('')
 
-  // Don't render if WebAuthn is not supported
+  // Keep layout stable while support is detected or unavailable
   if (!isSupported) {
-    return null
+    return <div className={className} aria-hidden="true" />
   }
 
   const handleFingerprintLogin = async () => {

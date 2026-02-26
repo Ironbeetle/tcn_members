@@ -246,7 +246,7 @@ export default function Register() {
         <CardDescription>
           {isVerified 
             ? `Welcome, ${verifiedMember?.firstName}! Create your login credentials below.`
-            : "Enter your Treaty Number and Date of Birth to verify your identity"
+            : "Enter your 10 digit Treaty Number and Date of Birth to verify your identity"
           }
         </CardDescription>
       </CardHeader>
@@ -284,11 +284,11 @@ export default function Register() {
                     type="text"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
                     {...registerVerify("t_number", { 
-                      required: "Treaty number is required",
+                      required: "10 digitTreaty number is required",
                       onChange: handleTNumberChange
                     })}
                     disabled={isVerifying}
-                    placeholder="T12345 or 12345"
+                    placeholder="T1234567890"
                   />
                   {verifyErrors.t_number && (
                     <p className="text-sm text-red-600">{verifyErrors.t_number.message}</p>
