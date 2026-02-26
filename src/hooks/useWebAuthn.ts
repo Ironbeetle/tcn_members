@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { startRegistration, startAuthentication, browserSupportsWebAuthn } from '@simplewebauthn/browser'
 import { signIn } from 'next-auth/react'
@@ -29,9 +30,13 @@ export type WebAuthnCredential = {
 // ============================================
 
 export function useWebAuthnSupport() {
-  return {
-    isSupported: typeof window !== 'undefined' && browserSupportsWebAuthn(),
-  }
+  const [isSupported, setIsSupported] = useState(false)
+
+  useEffect(() => {
+    setIsSupported(browserSupportsWebAuthn())
+  }, [])
+
+  return { isSupported }
 }
 
 // ============================================
