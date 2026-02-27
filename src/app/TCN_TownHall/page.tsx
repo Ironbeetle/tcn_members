@@ -45,26 +45,11 @@ export default function page() {
           <div className="flex flex-col justify-center items-center w-full h-full lg:h-[90vh]">
             <div className="col-span-2 flex flex-col justify-center items-center p-6 lg:p-1">
               <div className="techtxttitle mb-4 lg:mb-12">
-                Tataskweyak Cree Nation
+                Tansi TCN Members 
               </div>
-              <div className="techtxtmbb mb-4 lg:mb-12">
-                Community Meeting November 12, 2025
-              </div>
-            </div>
-            {/* right side link menu */}
-            <div className="col-span-3 flex flex-col justify-center items-center p-4">
-              <div className='w-full h-auto'>
-                <Link href="/TCN_Matters" className='panelalt h-auto'>
-                  <div className="techtxtmb flex flex-col justify-center items-center p-2 h-full">
-                    <Image src='/tcnlogosm.png' 
-                      className='object-contain'
-                      width={150}
-                      height={150}
-                      alt='TCN Logo'  
-                    />
-                    Enter
-                  </div>
-                </Link>
+              <div className="techtxtmbb mb-4 lg:mb-12 max-w-6xl text-center">
+                Community Meeting Section is currently under construction and will be available soon.<br/> 
+                Please check back later for updates and announcements.
               </div>
             </div>
           </div>
