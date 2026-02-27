@@ -83,7 +83,7 @@ export default function TCN_Enter() {
   return (
     <div className="w-full min-h-screen genbkg">
         {/* Navigation */}
-        <div className="fixed top-0 z-100 w-full">
+        <div className="fixed top-0 z-[100] w-full">
         <div className="lg:hidden bg-amber-900 backdrop-blur-sm border-b border-amber-600/50">
           <div className="flex items-center px-4 h-14">
             <div className="w-[20vw]">
@@ -180,11 +180,11 @@ export default function TCN_Enter() {
 
                 </div>
             </div>
-            <SheetContent side="right" className="w-full sm:max-w-md">
+            <SheetContent side="right" className="w-full sm:max-w-md pt-16 lg:pt-0 z-[110]">
               <SheetHeader>
                 <SheetTitle>Activation support</SheetTitle>
                 <SheetDescription>
-                  Send a message to tech support and we will follow up by email.
+                  Send your full name and birth date with a message to tech support and we will follow up by email.
                 </SheetDescription>
               </SheetHeader>
               <div className="px-4 pb-6">
