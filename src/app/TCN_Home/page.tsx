@@ -136,10 +136,17 @@ export default function TCNHomePage() {
             <div className="py-4 space-y-2 overflow-y-auto">
               {/* Quick Stats Summary (Mobile) */}
               {memberStats && (
-                <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4 mb-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <BarChart3 className="w-5 h-5 text-amber-700" />
-                    <span className="font-semibold text-amber-900">Member Stats</span>
+                <Link 
+                  href="/TCN_Stats"
+                  onClick={() => setMoreMenuOpen(false)}
+                  className="block bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4 mb-4 hover:from-amber-100 hover:to-amber-200 transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <BarChart3 className="w-5 h-5 text-amber-700" />
+                      <span className="font-semibold text-amber-900">Member Stats</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-amber-600" />
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="bg-white/60 rounded-lg p-2">
@@ -155,7 +162,10 @@ export default function TCNHomePage() {
                       <div className="text-[10px] text-stone-500">Total</div>
                     </div>
                   </div>
-                </div>
+                  <div className="mt-2 text-center text-xs text-amber-700 font-medium">
+                    Tap to view detailed demographics →
+                  </div>
+                </Link>
               )}
               
               {/* Department Links */}
@@ -328,6 +338,13 @@ export default function TCNHomePage() {
                   {((memberStats.activatedMembers / memberStats.totalMembers) * 100).toFixed(1)}% activated
                 </div>
               </div>
+              {/* Link to detailed stats */}
+              <Link 
+                href="/TCN_Stats"
+                className="mt-3 block w-full py-2 px-4 bg-amber-700 hover:bg-amber-800 text-white text-xs font-medium rounded-lg transition-colors text-center"
+              >
+                Some Interesting Stats
+              </Link>
             </div>
           </>
         ) : (
@@ -336,6 +353,7 @@ export default function TCNHomePage() {
           </div>
         )}
       </motion.div>
+      
     </aside>
   );
   };

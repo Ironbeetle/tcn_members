@@ -1522,6 +1522,113 @@ export async function getMembershipStats(): Promise<ActionResult<{
   }
 }
 
+// Get detailed stats for dashboard (reserve status, communities, age groups) - only for activated members
+export async function getDetailedMemberStats(): Promise<ActionResult<{
+  reserveStatus: { name: string; value: number; percentage: string }[];
+  communities: { name: string; value: number; percentage: string }[];
+  ageGroups: { ageRange: string; count: number; percentage: string }[];
+  totalActivated: number;
+}>> {
+  try {
+    // Fetch all activated members with their profiles
+    const activatedMembers = await prisma.fnmember.findMany({
+      where: { activated: 'ACTIVATED' },
+      include: {
+        profile: true,
+      },
+    });
+
+    const totalActivated = activatedMembers.length;
+
+    if (totalActivated === 0) {
+      return {
+        success: true,
+        data: {
+          reserveStatus: [],
+          communities: [],
+          ageGroups: [],
+          totalActivated: 0,
+        },
+      };
+    }
+
+    // Calculate Reserve Status distribution
+    const reserveCounts: Record<string, number> = {};
+    activatedMembers.forEach(member => {
+      const status = member.profile?.[0]?.o_r_status?.trim() || 'Unknown';
+      reserveCounts[status] = (reserveCounts[status] || 0) + 1;
+    });
+
+    const reserveStatus = Object.entries(reserveCounts)
+      .map(([name, value]) => ({
+        name,
+        value,
+        percentage: ((value / totalActivated) * 100).toFixed(1),
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    // Calculate Community distribution
+    const communityCounts: Record<string, number> = {};
+    activatedMembers.forEach(member => {
+      const community = member.profile?.[0]?.community?.trim() || 'Unspecified';
+      communityCounts[community] = (communityCounts[community] || 0) + 1;
+    });
+
+    const communities = Object.entries(communityCounts)
+      .map(([name, value]) => ({
+        name,
+        value,
+        percentage: ((value / totalActivated) * 100).toFixed(1),
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    // Calculate Age Groups distribution
+    const ageGroups: Record<string, number> = {
+      '0-17': 0,
+      '18-25': 0,
+      '26-35': 0,
+      '36-45': 0,
+      '46-55': 0,
+      '56-65': 0,
+      '65+': 0,
+    };
+
+    const now = new Date();
+    activatedMembers.forEach(member => {
+      if (member.birthdate) {
+        const birthDate = new Date(member.birthdate);
+        const age = Math.floor((now.getTime() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+        
+        if (age <= 17) ageGroups['0-17']++;
+        else if (age <= 25) ageGroups['18-25']++;
+        else if (age <= 35) ageGroups['26-35']++;
+        else if (age <= 45) ageGroups['36-45']++;
+        else if (age <= 55) ageGroups['46-55']++;
+        else if (age <= 65) ageGroups['56-65']++;
+        else ageGroups['65+']++;
+      }
+    });
+
+    const ageGroupsData = Object.entries(ageGroups).map(([ageRange, count]) => ({
+      ageRange,
+      count,
+      percentage: ((count / totalActivated) * 100).toFixed(1),
+    }));
+
+    return {
+      success: true,
+      data: {
+        reserveStatus,
+        communities,
+        ageGroups: ageGroupsData,
+        totalActivated,
+      },
+    };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
 // ==================== SIGNUP FORM ACTIONS ====================
 
 // Types for signup forms
