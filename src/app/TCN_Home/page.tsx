@@ -26,6 +26,7 @@ import {
   ArrowLeft,
   Home,
   ClipboardList,
+  ClipboardSignature,
   User,
   BarChart3,
   Menu,
@@ -43,7 +44,7 @@ const navItems = [
 
 const departments = [
   {
-    title: 'Community Directory',
+    title: 'Contact Directory',
     description: 'Administrative services and member support',
     icon: Briefcase,
     link: '/TCN_BandOffice',
@@ -53,6 +54,12 @@ const departments = [
     description: 'Leadership updates and governance information',
     icon: Users,
     link: '/TCN_LocalGovernance',
+  },
+  {
+    title: 'Sign-Up Forms',
+    description: 'Access and submit various sign-up forms',
+    icon: ClipboardSignature,
+    link: '/TCN_Forms',
   }
 ];
 
@@ -225,10 +232,12 @@ export default function TCNHomePage() {
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
-        className="bg-white rounded-2xl shadow-sm border border-stone-200 p-4 sticky top-24"
+        className="bg-white rounded-2xl shadow-sm border border-stone-200 sticky top-24 overflow-hidden"
       >
-        <h3 className="font-bold text-stone-800 mb-3 text-sm">Tataskweyak</h3>
-        <div className="space-y-1">
+        <div className="h-20 w-full bg-gradient-to-r from-amber-700 to-amber-900 flex items-center">
+          <h3 className="font-bold text-stone-200 text-lg sm:text-xl w-full text-center">Quick Links</h3>
+        </div>
+        <div className="space-y-1 p-4">
           {departments.map((dept) => (
             <Link key={dept.title} href={dept.link}>
               <div className="p-2 rounded-lg hover:bg-amber-50 transition-colors cursor-pointer group">

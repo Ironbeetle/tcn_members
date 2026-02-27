@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-
 import { UserSessionBar } from '@/components/UserSessionBar';
 import { MobileBottomNav, MobilePageHeader } from '@/components/MobileNav';
 import { motion } from 'framer-motion';
@@ -25,13 +24,14 @@ import {
   Calendar, 
   Bell,
   Filter,
-  Pin,
   ArrowLeft,
   X,
   ImageIcon,
   FileText,
   RefreshCw,
-  ChevronDown
+  ChevronDown,
+  Building2,
+  ArrowRight
 } from 'lucide-react';
 
 // Categories from schema enum
@@ -148,8 +148,9 @@ export default function page() {
   }, []);
 
   // Memoized posts - must be before any early returns to follow Rules of Hooks
-  const pinnedPosts = useMemo(() => bulletins.slice(0, 2), [bulletins]);
-  const regularPosts = useMemo(() => bulletins.slice(2), [bulletins]);
+  // Featured post (latest) and remaining posts
+  const featuredPost = useMemo(() => bulletins[0] || null, [bulletins]);
+  const remainingPosts = useMemo(() => bulletins.slice(1), [bulletins]);
 
   if (status === "loading") {
     return (
@@ -424,7 +425,7 @@ export default function page() {
             </aside>
 
             {/* MAIN CONTENT - Bulletin Posts Feed */}
-            <main className="lg:col-span-6 space-y-3 sm:space-y-4 overscroll-y-auto">
+            <main className="lg:col-span-6 space-y-4 sm:space-y-6 overscroll-y-auto">
               {/* Desktop Page Header */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -441,76 +442,82 @@ export default function page() {
                 <p className="text-amber-50">Stay informed with the latest announcements, events, and updates from Tataskweyak Cree Nation</p>
               </motion.div>
 
-              {/* Pinned Posts */}
-              {pinnedPosts.length > 0 && (
-                <div className="space-y-3">
-                  <h3 className="text-sm font-bold text-stone-600 px-2 flex items-center gap-2">
-                    <Pin className="w-4 h-4" />
-                    Pinned Posts
+              {/* Featured Latest Post */}
+              {featuredPost && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  onClick={() => openBulletinModal(featuredPost)}
+                  className="bg-white rounded-2xl shadow-lg border-2 border-amber-200 overflow-hidden hover:shadow-xl transition-all cursor-pointer group"
+                >
+                  <div className="bg-gradient-to-r from-amber-50 to-amber-100/50 px-5 py-3 border-b border-amber-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-700 text-white">
+                          Latest
+                        </span>
+                        <span className="text-xs font-semibold text-amber-800 uppercase">
+                          {categories.find(c => c.value === featuredPost.category)?.label}
+                        </span>
+                      </div>
+                      <span className="text-xs text-amber-700 font-medium">
+                        {new Date(featuredPost.created).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <h2 className="font-bold text-2xl text-stone-800 mb-3 group-hover:text-amber-800 transition-colors">
+                      {featuredPost.title}
+                    </h2>
+                    <p className="text-stone-600 mb-4 line-clamp-3 text-base leading-relaxed">
+                      {featuredPost.subject}
+                    </p>
+                    <div className="flex items-center text-amber-700 font-semibold group-hover:text-amber-800 transition-colors">
+                      <span>Read Full Post</span>
+                      <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Recent Posts Grid */}
+              {remainingPosts.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-stone-600 px-1 flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Recent Posts
                   </h3>
-                  {pinnedPosts.map((post, index) => (
-                    <motion.div
-                      key={post.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.05 }}
-                      onClick={() => openBulletinModal(post)}
-                      className="bg-white rounded-xl shadow-sm border-2 border-amber-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                    >
-                      <div className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {remainingPosts.map((post, index) => (
+                      <motion.div
+                        key={post.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                        onClick={() => openBulletinModal(post)}
+                        className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden hover:shadow-md hover:border-amber-300 transition-all cursor-pointer group"
+                      >
+                        <div className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
                             <div className={`w-2 h-2 rounded-full bg-${categories.find(c => c.value === post.category)?.color || 'amber'}-500`}></div>
-                            <span className="text-xs font-semibold text-stone-500 uppercase">
+                            <span className="text-xs font-semibold text-stone-500 uppercase truncate">
                               {categories.find(c => c.value === post.category)?.label}
                             </span>
                           </div>
-                          <Pin className="w-4 h-4 text-amber-700" />
+                          <h3 className="font-bold text-base text-stone-800 mb-2 line-clamp-2 group-hover:text-amber-800 transition-colors">
+                            {post.title}
+                          </h3>
+                          <p className="text-sm text-stone-600 mb-3 line-clamp-2">{post.subject}</p>
+                          <div className="flex items-center justify-between text-xs text-stone-500">
+                            <span>{new Date(post.created).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                            <span className="text-amber-700 font-medium group-hover:text-amber-800">View →</span>
+                          </div>
                         </div>
-                        <h3 className="font-bold text-lg text-stone-800 mb-2">{post.title}</h3>
-                        <p className="text-sm text-stone-600 mb-3 line-clamp-2">{post.subject}</p>
-                        <div className="flex items-center justify-between text-xs text-stone-500">
-                          <span>{new Date(post.created).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                          <span className="text-amber-700 font-medium hover:text-amber-800">View Details →</span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-
-              {/* Regular Posts */}
-              {regularPosts.length > 0 && (
-                <div className="space-y-3">
-                  {pinnedPosts.length > 0 && (
-                    <h3 className="text-sm font-bold text-stone-600 px-2 mt-6">Recent Posts</h3>
-                  )}
-                  {regularPosts.map((post, index) => (
-                    <motion.div
-                      key={post.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.3, delay: index * 0.05 }}
-                      onClick={() => openBulletinModal(post)}
-                      className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden hover:shadow-md hover:border-amber-300 transition-all cursor-pointer"
-                    >
-                      <div className="p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className={`w-2 h-2 rounded-full bg-${categories.find(c => c.value === post.category)?.color || 'amber'}-500`}></div>
-                          <span className="text-xs font-semibold text-stone-500 uppercase">
-                            {categories.find(c => c.value === post.category)?.label}
-                          </span>
-                        </div>
-                        <h3 className="font-bold text-lg text-stone-800 mb-2">{post.title}</h3>
-                        <p className="text-sm text-stone-600 mb-3 line-clamp-2">{post.subject}</p>
-                        <div className="flex items-center justify-between text-xs text-stone-500">
-                          <span>{new Date(post.created).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                          <span className="text-amber-700 font-medium hover:text-amber-800">View Details →</span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -535,28 +542,42 @@ export default function page() {
               )}
             </main>
 
-            {/* RIGHT SIDEBAR - User Info & Quick Actions (Desktop only) */}
+            {/* RIGHT SIDEBAR - Community Meetings (Desktop only) */}
             <aside className="hidden lg:block lg:col-span-3 space-y-4 overscroll-y-none">
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5 }}
-                className="bg-white rounded-2xl shadow-sm border border-stone-200 p-4 sticky top-24"
+                className="sticky top-24 space-y-4"
               >
-                <h3 className="font-bold text-stone-800 mb-4">Quick Actions</h3>
-                <div className="space-y-2">
-                  <Link href="/TCN_Forms" className="block p-3 rounded-lg hover:bg-amber-50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-amber-700" />
-                      <span className="text-sm font-medium text-stone-700">Community Forms</span>
+                {/* Community Meetings Panel */}
+                <Link href="/TCN_TownHall" className="block">
+                  <div className="bg-gradient-to-br from-amber-700 to-amber-900 rounded-2xl shadow-lg p-5 text-white hover:shadow-xl transition-all group">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 rounded-xl bg-white/20">
+                        <Building2 className="w-6 h-6" />
+                      </div>
+                      <h3 className="font-bold text-lg">Community Meetings</h3>
                     </div>
-                  </Link>
-                  <button className="w-full p-3 rounded-lg hover:bg-amber-50 transition-colors text-left">
-                    <div className="flex items-center gap-3">
-                      <Bell className="w-5 h-5 text-amber-700" />
-                      <span className="text-sm font-medium text-stone-700">Notifications</span>
+                    <p className="text-amber-100 text-sm mb-4">
+                      Stay updated on upcoming town halls and community gatherings.
+                    </p>
+                    <div className="flex items-center text-amber-100 font-medium text-sm group-hover:text-white transition-colors">
+                      <span>View Meetings</span>
+                      <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                     </div>
-                  </button>
+                  </div>
+                </Link>
+
+                {/* Info Card */}
+                <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Bell className="w-5 h-5 text-amber-700" />
+                    <h3 className="font-bold text-stone-800">Stay Updated</h3>
+                  </div>
+                  <p className="text-sm text-stone-600">
+                    Check back regularly for the latest community announcements and important updates.
+                  </p>
                 </div>
               </motion.div>              
             </aside>
