@@ -1,10 +1,10 @@
 'use client';
 import Link from 'next/link';
-import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { UserSessionBar } from '@/components/UserSessionBar';
+import { MobileBottomNav } from '@/components/MobileNav';
 import { motion } from 'framer-motion';
 import { 
   PieChart, 
@@ -18,45 +18,24 @@ import {
   YAxis, 
   CartesianGrid,
 } from 'recharts';
-import { getDetailedMemberStats } from '@/lib/actions';
+import { getDetailedMemberStats, getMembershipStats } from '@/lib/actions';
 import { useIsDesktop } from '@/hooks/useMediaQuery';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { 
   ArrowLeft,
-  Home,
-  ClipboardList,
-  User,
-  Menu,
-  ChevronRight,
   BarChart3,
   Users,
   MapPin,
   Calendar,
-  Briefcase,
 } from 'lucide-react';
-
-// Navigation items for bottom nav and sidebar
-const navItems = [
-  { title: 'Home', icon: Home, link: '/TCN_Home' },
-  { title: 'Bulletin', icon: ClipboardList, link: '/TCN_BulletinBoard' },
-  { title: 'Directory', icon: Briefcase, link: '/TCN_BandOffice' },
-  { title: 'Account', icon: User, link: '/Member_Account' },
-];
 
 // Chart colors matching app theme (amber/stone)
 const RESERVE_COLORS = ['#059669', '#3b82f6', '#9ca3af']; // emerald, blue, gray
+const CHART_COLORS = ['#059669', '#f59e0b', '#9ca3af']; // Pie chart colors for activation status
 
 export default function TCN_Stats() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const isDesktop = useIsDesktop();
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
 
   // Fetch detailed stats
   const {
@@ -77,6 +56,31 @@ export default function TCN_Stats() {
     refetchOnWindowFocus: false,
   });
 
+  // Fetch membership stats for activation pie chart
+  const {
+    data: memberStats,
+    isLoading: loadingStats,
+  } = useQuery({
+    queryKey: ['membershipStats'],
+    queryFn: async () => {
+      const result = await getMembershipStats();
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to fetch stats');
+      }
+      return result.data;
+    },
+    enabled: status === 'authenticated',
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+  });
+
+  // Prepare pie chart data for activation status
+  const pieChartData = memberStats ? [
+    { name: 'Activated', value: memberStats.activatedMembers, color: CHART_COLORS[0] },
+    { name: 'Pending', value: memberStats.pendingMembers, color: CHART_COLORS[1] },
+    { name: 'Not Activated', value: memberStats.noneMembers, color: CHART_COLORS[2] },
+  ].filter(item => item.value > 0) : [];
+
   if (status === "loading") {
     return (
       <div className="w-full min-h-screen genbkg flex items-center justify-center">
@@ -89,55 +93,6 @@ export default function TCN_Stats() {
     router.push("/TCN_Enter");
     return null;
   }
-
-  // ========== MOBILE BOTTOM NAVIGATION ==========
-  const MobileBottomNav = () => (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-stone-200 shadow-lg lg:hidden safe-area-bottom">
-      <div className="flex items-center justify-around h-16 px-2">
-        {navItems.map((item) => (
-          <Link
-            key={item.title}
-            href={item.link}
-            className="flex flex-col items-center justify-center flex-1 h-full py-2 text-stone-500 hover:text-amber-600"
-          >
-            <item.icon className="w-5 h-5" />
-            <span className="text-[10px] mt-1 font-medium">{item.title}</span>
-          </Link>
-        ))}
-        <Sheet open={moreMenuOpen} onOpenChange={setMoreMenuOpen}>
-          <SheetTrigger asChild>
-            <button className="flex flex-col items-center justify-center flex-1 h-full py-2 text-stone-500 hover:text-amber-600">
-              <Menu className="w-5 h-5" />
-              <span className="text-[10px] mt-1 font-medium">More</span>
-            </button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="h-[50vh] rounded-t-3xl">
-            <SheetHeader className="text-left pb-4 border-b border-stone-100">
-              <SheetTitle className="text-lg font-bold text-stone-800">Menu</SheetTitle>
-            </SheetHeader>
-            <div className="py-4 space-y-2 overflow-y-auto">
-              <Link
-                href="/TCN_Home"
-                onClick={() => setMoreMenuOpen(false)}
-                className="flex items-center justify-between p-3 rounded-xl hover:bg-amber-50 transition-colors group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
-                    <Home className="w-5 h-5 text-amber-700" />
-                  </div>
-                  <div>
-                    <div className="font-medium text-stone-800">Home</div>
-                    <div className="text-xs text-stone-500">Return to main portal</div>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-amber-600" />
-              </Link>
-            </div>
-          </SheetContent>
-        </Sheet>
-      </div>
-    </nav>
-  );
 
   // Custom tooltip for charts
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -190,45 +145,7 @@ export default function TCN_Stats() {
     );
   };
 
-  const CommunityChart = () => {
-    if (!detailedStats?.communities || detailedStats.communities.length === 0) {
-      return (
-        <div className="text-center py-8 text-stone-500">
-          No community data available
-        </div>
-      );
-    }
-
-    return (
-      <div className="h-72 w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart 
-            data={detailedStats.communities}
-            layout="vertical"
-            margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" opacity={0.5} />
-            <XAxis type="number" stroke="#78716c" fontSize={12} />
-            <YAxis 
-              dataKey="name" 
-              type="category" 
-              stroke="#78716c" 
-              fontSize={11}
-              width={75}
-              tickFormatter={(value) => value.length > 12 ? value.slice(0, 12) + '...' : value}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Bar 
-              dataKey="value" 
-              fill="#d97706"
-              radius={[0, 4, 4, 0]}
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    );
-  };
-
+  
   const AgeGroupsChart = () => {
     if (!detailedStats?.ageGroups || detailedStats.ageGroups.length === 0) {
       return (
@@ -339,6 +256,105 @@ export default function TCN_Stats() {
           {/* Stats Grid */}
           <div className="space-y-6">
             
+            {/* Member Activation Status */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl shadow-sm border border-amber-200 overflow-hidden"
+            >
+              <div className="p-4 border-b border-amber-200 bg-gradient-to-r from-amber-100 to-amber-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-600 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-stone-800">Member Activation Status</h2>
+                    <p className="text-xs text-stone-500">Account activation overview</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4">
+                {loadingStats ? <ChartSkeleton /> : !memberStats ? (
+                  <div className="text-center py-8 text-stone-500">Unable to load stats</div>
+                ) : (
+                  <>
+                    {/* Pie Chart */}
+                    <div className="h-48 w-full min-h-[192px]">
+                      <ResponsiveContainer width="100%" height="100%" minHeight={192}>
+                        <PieChart>
+                          <Pie
+                            data={pieChartData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={40}
+                            outerRadius={70}
+                            paddingAngle={2}
+                            dataKey="value"
+                          >
+                            {pieChartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            formatter={(value: number) => [value.toLocaleString(), 'Members']}
+                            contentStyle={{ 
+                              backgroundColor: 'white', 
+                              border: '1px solid #e7e5e4',
+                              borderRadius: '8px',
+                              fontSize: '12px'
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* Stats Legend */}
+                    <div className="space-y-2 mt-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-emerald-600"></div>
+                          <span className="text-xs text-stone-600">Activated</span>
+                        </div>
+                        <span className="text-sm font-bold text-emerald-700">
+                          {memberStats.activatedMembers.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                          <span className="text-xs text-stone-600">Pending</span>
+                        </div>
+                        <span className="text-sm font-bold text-amber-600">
+                          {memberStats.pendingMembers.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-stone-400"></div>
+                          <span className="text-xs text-stone-600">Not Activated</span>
+                        </div>
+                        <span className="text-sm font-bold text-stone-500">
+                          {memberStats.noneMembers.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="border-t border-amber-200 pt-2 mt-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-amber-800">Total Members</span>
+                          <span className="text-lg font-bold text-amber-700">
+                            {memberStats.totalMembers.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="text-xs text-amber-700 mt-1">
+                          {((memberStats.activatedMembers / memberStats.totalMembers) * 100).toFixed(1)}% activated
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </motion.div>
+
             {/* Reserve Status */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -378,33 +394,6 @@ export default function TCN_Stats() {
                       ))}
                     </div>
                   </>
-                )}
-              </div>
-            </motion.div>
-
-            {/* Communities */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-              className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden"
-            >
-              <div className="p-4 border-b border-stone-100 bg-gradient-to-r from-amber-50 to-amber-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-600 flex items-center justify-center">
-                    <Users className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-stone-800">Communities</h2>
-                    <p className="text-xs text-stone-500">Member distribution by community</p>
-                  </div>
-                </div>
-              </div>
-              <div className="p-4">
-                {isLoading ? <ChartSkeleton /> : isError ? (
-                  <div className="text-center py-8 text-stone-500">Error loading data</div>
-                ) : (
-                  <CommunityChart />
                 )}
               </div>
             </motion.div>

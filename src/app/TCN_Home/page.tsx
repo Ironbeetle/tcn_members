@@ -1,21 +1,14 @@
 'use client'
 import Link from 'next/link';
-import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { UserSessionBar } from '@/components/UserSessionBar';
-import { motion, AnimatePresence } from 'framer-motion';
+import { MobileBottomNav, MobileLinkPanels } from '@/components/MobileNav';
+import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { getMembershipStats } from '@/lib/actions';
 import { useIsDesktop } from '@/hooks/useMediaQuery';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { 
   Megaphone, 
   Briefcase, 
@@ -27,20 +20,8 @@ import {
   Home,
   ClipboardList,
   ClipboardSignature,
-  User,
-  BarChart3,
-  Menu,
-  X,
-  ChevronRight
+  User
 } from 'lucide-react';
-
-// Navigation items for bottom nav and sidebar
-const navItems = [
-  { title: 'Home', icon: Home, link: '/TCN_Home', active: true },
-  { title: 'Bulletin', icon: ClipboardList, link: '/TCN_BulletinBoard' },
-  { title: 'Directory', icon: Briefcase, link: '/TCN_BandOffice' },
-  { title: 'Account', icon: User, link: '/Member_Account' },
-];
 
 const departments = [
   {
@@ -70,7 +51,6 @@ export default function TCNHomePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const isDesktop = useIsDesktop();
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
 
   // TanStack Query for fetching membership stats
   const {
@@ -109,101 +89,6 @@ export default function TCNHomePage() {
     router.push("/TCN_Enter");
     return null;
   }
-
-  // ========== MOBILE BOTTOM NAVIGATION ==========
-  const MobileBottomNav = () => (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-stone-200 shadow-lg lg:hidden safe-area-bottom">
-      <div className="flex items-center justify-around h-16 px-2">
-        {navItems.map((item) => (
-          <Link
-            key={item.title}
-            href={item.link}
-            className={`flex flex-col items-center justify-center flex-1 h-full py-2 ${
-              item.active 
-                ? 'text-amber-700' 
-                : 'text-stone-500 hover:text-amber-600'
-            }`}
-          >
-            <item.icon className={`w-5 h-5 ${item.active ? 'stroke-[2.5]' : ''}`} />
-            <span className="text-[10px] mt-1 font-medium">{item.title}</span>
-          </Link>
-        ))}
-        {/* More Menu Trigger */}
-        <Sheet open={moreMenuOpen} onOpenChange={setMoreMenuOpen}>
-          <SheetTrigger asChild>
-            <button className="flex flex-col items-center justify-center flex-1 h-full py-2 text-stone-500 hover:text-amber-600">
-              <Menu className="w-5 h-5" />
-              <span className="text-[10px] mt-1 font-medium">More</span>
-            </button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl">
-            <SheetHeader className="text-left pb-4 border-b border-stone-100">
-              <SheetTitle className="text-lg font-bold text-stone-800">Menu</SheetTitle>
-            </SheetHeader>
-            <div className="py-4 space-y-2 overflow-y-auto">
-              {/* Quick Stats Summary (Mobile) */}
-              {memberStats && (
-                <Link 
-                  href="/TCN_Stats"
-                  onClick={() => setMoreMenuOpen(false)}
-                  className="block bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4 mb-4 hover:from-amber-100 hover:to-amber-200 transition-colors"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <BarChart3 className="w-5 h-5 text-amber-700" />
-                      <span className="font-semibold text-amber-900">Member Stats</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-amber-600" />
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="bg-white/60 rounded-lg p-2">
-                      <div className="text-lg font-bold text-emerald-600">{memberStats.activatedMembers}</div>
-                      <div className="text-[10px] text-stone-500">Active</div>
-                    </div>
-                    <div className="bg-white/60 rounded-lg p-2">
-                      <div className="text-lg font-bold text-amber-600">{memberStats.pendingMembers}</div>
-                      <div className="text-[10px] text-stone-500">Pending</div>
-                    </div>
-                    <div className="bg-white/60 rounded-lg p-2">
-                      <div className="text-lg font-bold text-amber-800">{memberStats.totalMembers}</div>
-                      <div className="text-[10px] text-stone-500">Total</div>
-                    </div>
-                  </div>
-                  <div className="mt-2 text-center text-xs text-amber-700 font-medium">
-                    Tap to view detailed demographics →
-                  </div>
-                </Link>
-              )}
-              
-              {/* Department Links */}
-              <div className="space-y-1">
-                <h4 className="text-xs font-semibold text-stone-400 uppercase tracking-wider px-2 mb-2">Community</h4>
-                {departments.map((dept) => (
-                  <Link
-                    key={dept.title}
-                    href={dept.link}
-                    onClick={() => setMoreMenuOpen(false)}
-                    className="flex items-center justify-between p-3 rounded-xl hover:bg-amber-50 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
-                        <dept.icon className="w-5 h-5 text-amber-700" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-stone-800">{dept.title}</div>
-                        <div className="text-xs text-stone-500">{dept.description}</div>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-amber-600" />
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </SheetContent>
-        </Sheet>
-      </div>
-    </nav>
-  );
 
   // ========== DESKTOP SIDEBAR ==========
   const DesktopSidebar = () => (
@@ -352,7 +237,7 @@ export default function TCNHomePage() {
                 href="/TCN_Stats"
                 className="mt-3 block w-full py-2 px-4 bg-amber-700 hover:bg-amber-800 text-white text-xs font-medium rounded-lg transition-colors text-center"
               >
-                Some Interesting Stats
+                More Network Stats
               </Link>
             </div>
           </>
@@ -527,6 +412,9 @@ export default function TCNHomePage() {
                 </div>
                 <p className="text-amber-50">Welcome to the TCN Member Portal.</p>
               </motion.div>
+
+              {/* Mobile Link Panels - Stats, TownHall, Governance */}
+              <MobileLinkPanels />
 
               {/* Content Cards */}
               {contentCards.map((card, index) => (
