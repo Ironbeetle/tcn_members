@@ -150,13 +150,18 @@ export default function TCN_Enter() {
                       {/* Left column: text content */}
                       <div className="flex flex-col gap-3" style={{ fontSize: 'clamp(1rem, 0.464rem + 1.429vw, 1.75rem)', lineHeight: '1.6' }}>
                         <p>
-                          Based on Indigenous registration in Canada, the 10-digit registration number found on a Secure Certificate of Indian Status is a unique identifier used to confirm a person's status under the Indian Act. You can find your 10-digit treaty number on the front of your status card.
+                          Based on Indigenous registration in Canada, the 10-digit registration number found on a 
+                          Secure Certificate of Indian Status is a unique identifier used to confirm a person's status under the 
+                          Indian Act. You can find your 10-digit treaty number on the front of your status card.
                         </p>
                         <p>
-                          Please enter your 10 digit Treaty number to activate your account. Once entered, your Treaty number will be locked and your Barcode number will then serve as your identifier in the system.
+                          Please enter your 10 digit Treaty number to activate your account.<br/>
+                          The cloud database will be updated every 2 weeks, to include TCN members 
+                          who just turned 18 years of age.
                         </p>
                         <p>
-                          If you need assistance with registration, please send an email with your full name and birth date, and we will find out what is happening, and get back to you.
+                          If you need assistance with registration, please send an email with your full name and birth date, and 
+                          we will find out what is happening, and get back to you.
                         </p>
                         <div className="mt-1">
                           <SheetTrigger asChild>
@@ -190,7 +195,7 @@ export default function TCN_Enter() {
               <div className="px-4 pb-6">
                 <form className="space-y-3" onSubmit={handleSupportSubmit}>
                   <div className="space-y-1">
-                    <Label htmlFor="support-name">Your Full First and Last Name name</Label>
+                    <Label htmlFor="support-name">Your Full First and Last Name</Label>
                     <Input
                       id="support-name"
                       name="support-name"

@@ -27,7 +27,8 @@ import {
   Trash2,
   Download,
   FileText,
-  Fingerprint
+  Fingerprint,
+  Home
 } from 'lucide-react';
 import { FingerprintSettings } from '@/components/FingerprintSettings';
 
@@ -280,7 +281,7 @@ export default function MemberAccount() {
             />
           </div>
 
-          {/* Desktop Back Button */}
+          {/* Desktop Home Link */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -288,11 +289,11 @@ export default function MemberAccount() {
             className="hidden lg:block mb-4"
           >
             <button
-              onClick={() => router.back()}
+              onClick={() => router.push('/TCN_Home')}
               className="flex items-center gap-2 px-4 py-2 text-stone-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm font-medium">Back</span>
+              <Home className="w-4 h-4" />
+              <span className="text-sm font-medium">Home</span>
             </button>
           </motion.div>
 
@@ -386,59 +387,40 @@ export default function MemberAccount() {
                 </div>
               </motion.div>
 
-              {/* Personal Information Card */}
+              {/* Edit Profile & Account Settings Links */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
-                className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-4"
               >
-                <h2 className="text-xl font-bold text-stone-800 mb-4">Personal Information</h2>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <User className="w-5 h-5 text-amber-700 mt-1" />
-                    <div>
-                      <p className="text-sm text-stone-500">Full Name</p>
-                      <p className="font-semibold text-stone-800">{memberData.firstName} {memberData.lastName}</p>
+                {/* Update Address Card */}
+                <button
+                  onClick={() => router.push('/Member_Account/edit?section=address')}
+                  className="bg-white rounded-2xl shadow-sm border border-stone-200 p-5 text-left hover:border-amber-300 hover:shadow-md transition-all group"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-amber-100 rounded-lg group-hover:bg-amber-200 transition-colors">
+                      <MapPin className="w-5 h-5 text-amber-700" />
                     </div>
+                    <h3 className="font-semibold text-stone-800">Moving?</h3>
                   </div>
-                 
-                  <div className="flex items-start gap-3">
-                    <User className="w-5 h-5 text-amber-700 mt-1" />
-                    <div>
-                      <p className="text-sm text-stone-500">Date of Birth</p>
-                      <p className="font-semibold text-stone-800">
-                        {(() => {
-                          const dateStr = memberData.birthdate;
-                          // Handle ISO string from Prisma - use UTC values to avoid timezone shift
-                          const date = new Date(dateStr);
-                          return date.toLocaleDateString('en-US', { 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric',
-                            timeZone: 'UTC'
-                          });
-                        })()}
-                      </p>
+                  <p className="text-sm text-stone-500">Update your address, community, and province when you relocate</p>
+                </button>
+
+                {/* Account Settings Card */}
+                <button
+                  onClick={() => router.push('/Member_Account/edit?section=account')}
+                  className="bg-white rounded-2xl shadow-sm border border-stone-200 p-5 text-left hover:border-amber-300 hover:shadow-md transition-all group"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-amber-100 rounded-lg group-hover:bg-amber-200 transition-colors">
+                      <User className="w-5 h-5 text-amber-700" />
                     </div>
+                    <h3 className="font-semibold text-stone-800">Account Settings</h3>
                   </div>
-                  {memberData.profile?.gender && (
-                    <div className="flex items-start gap-3">
-                      <User className="w-5 h-5 text-amber-700 mt-1" />
-                      <div>
-                        <p className="text-sm text-stone-500">Gender</p>
-                        <p className="font-semibold text-stone-800">{memberData.profile.gender}</p>
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex items-start gap-3">
-                    <User className="w-5 h-5 text-amber-700 mt-1" />
-                    <div>
-                      <p className="text-sm text-stone-500">Status</p>
-                      <p className="font-semibold text-stone-800">{memberData.profile?.o_r_status || 'N/A'}</p>
-                    </div>
-                  </div>
-                </div>
+                  <p className="text-sm text-stone-500">Change your username and login email</p>
+                </button>
               </motion.div>
 
               {/* Contact Information Card */}

@@ -215,6 +215,32 @@ export async function getFnmemberById(id: string): Promise<ActionResult<any>> {
   }
 }
 
+export async function getFnmemberWithAuth(id: string): Promise<ActionResult<any>> {
+  try {
+    const fnmember = await prisma.fnmember.findUnique({
+      where: { id },
+      include: {
+        profile: true,
+        auth: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+          }
+        },
+      },
+    });
+
+    if (!fnmember) {
+      return { success: false, error: "Member not found" };
+    }
+
+    return { success: true, data: fnmember };
+  } catch (error: any) {
+    return { success: false, error: handlePrismaError(error) };
+  }
+}
+
 // ==================== PROFILE ACTIONS ====================
 
 export async function createProfile(data: ProfileCreate): Promise<ActionResult<any>> {
