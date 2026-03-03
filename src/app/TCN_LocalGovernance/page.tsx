@@ -7,13 +7,6 @@ import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { queryBulletins, getChiefAndCouncil } from '@/lib/actions';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { 
   Users,
   Crown,
@@ -263,7 +256,6 @@ export default function TCNLocalGovernancePage() {
   const [activeTab, setActiveTab] = useState<'council' | 'bylaws' | 'news'>('council');
   const [selectedBulletin, setSelectedBulletin] = useState<Bulletin | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [tabSheetOpen, setTabSheetOpen] = useState(false);
 
   // TanStack Query for fetching Chief & Council from database
   const {
@@ -450,58 +442,42 @@ export default function TCNLocalGovernancePage() {
               gradient="from-blue-700 to-blue-900"
             />
             
-            {/* Mobile Tab Selector */}
-            <Sheet open={tabSheetOpen} onOpenChange={setTabSheetOpen}>
-              <SheetTrigger asChild>
-                <button className="w-full flex items-center justify-between p-3 bg-white rounded-xl border border-stone-200 shadow-sm">
-                  <div className="flex items-center gap-2">
-                    {activeTab === 'council' && <Crown className="w-4 h-4 text-blue-700" />}
-                    {activeTab === 'bylaws' && <Scale className="w-4 h-4 text-blue-700" />}
-                    {activeTab === 'news' && <Megaphone className="w-4 h-4 text-blue-700" />}
-                    <span className="text-sm font-medium text-stone-700">
-                      {activeTab === 'council' && 'Chief & Council'}
-                      {activeTab === 'bylaws' && 'Community By-Laws'}
-                      {activeTab === 'news' && 'News & Announcements'}
-                    </span>
-                  </div>
-                  <ChevronDown className="w-4 h-4 text-stone-400" />
-                </button>
-              </SheetTrigger>
-              <SheetContent side="bottom" className="h-auto rounded-t-3xl">
-                <SheetHeader className="text-left pb-4 border-b border-stone-100">
-                  <SheetTitle className="text-lg font-bold text-stone-800">Sections</SheetTitle>
-                </SheetHeader>
-                <div className="py-4 space-y-1">
-                  <button
-                    onClick={() => { setActiveTab('council'); setTabSheetOpen(false); }}
-                    className={`w-full p-3 rounded-xl text-left transition-colors flex items-center gap-3 ${
-                      activeTab === 'council' ? 'bg-blue-100 text-blue-900' : 'hover:bg-stone-50 text-stone-700'
-                    }`}
-                  >
-                    <Crown className="w-5 h-5" />
-                    <span className="font-medium">Chief & Council</span>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('bylaws'); setTabSheetOpen(false); }}
-                    className={`w-full p-3 rounded-xl text-left transition-colors flex items-center gap-3 ${
-                      activeTab === 'bylaws' ? 'bg-blue-100 text-blue-900' : 'hover:bg-stone-50 text-stone-700'
-                    }`}
-                  >
-                    <Scale className="w-5 h-5" />
-                    <span className="font-medium">Community By-Laws</span>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('news'); setTabSheetOpen(false); }}
-                    className={`w-full p-3 rounded-xl text-left transition-colors flex items-center gap-3 ${
-                      activeTab === 'news' ? 'bg-blue-100 text-blue-900' : 'hover:bg-stone-50 text-stone-700'
-                    }`}
-                  >
-                    <Megaphone className="w-5 h-5" />
-                    <span className="font-medium">News & Announcements</span>
-                  </button>
-                </div>
-              </SheetContent>
-            </Sheet>
+            {/* Mobile Tab Buttons */}
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={() => setActiveTab('council')}
+                className={`flex flex-col items-center justify-center p-3 rounded-xl transition-all ${
+                  activeTab === 'council' 
+                    ? 'bg-gradient-to-br from-blue-600 to-blue-800 text-white shadow-md' 
+                    : 'bg-white border border-stone-200 text-stone-700 hover:bg-stone-50'
+                }`}
+              >
+                <Crown className="w-5 h-5 mb-1" />
+                <span className="text-xs font-medium">Council</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('bylaws')}
+                className={`flex flex-col items-center justify-center p-3 rounded-xl transition-all ${
+                  activeTab === 'bylaws' 
+                    ? 'bg-gradient-to-br from-blue-600 to-blue-800 text-white shadow-md' 
+                    : 'bg-white border border-stone-200 text-stone-700 hover:bg-stone-50'
+                }`}
+              >
+                <Scale className="w-5 h-5 mb-1" />
+                <span className="text-xs font-medium">By-Laws</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('news')}
+                className={`flex flex-col items-center justify-center p-3 rounded-xl transition-all ${
+                  activeTab === 'news' 
+                    ? 'bg-gradient-to-br from-blue-600 to-blue-800 text-white shadow-md' 
+                    : 'bg-white border border-stone-200 text-stone-700 hover:bg-stone-50'
+                }`}
+              >
+                <Megaphone className="w-5 h-5 mb-1" />
+                <span className="text-xs font-medium">News</span>
+              </button>
+            </div>
           </div>
 
           {/* Desktop Back Button */}
@@ -779,39 +755,6 @@ export default function TCNLocalGovernancePage() {
                   <a href="mailto:bandoffice@tcn.ca" className="flex items-center gap-2 hover:text-amber-700">
                     <Mail className="w-4 h-4 text-amber-700" />
                     <span>bandoffice@tcn.ca</span>
-                  </a>
-                </div>
-              </motion.div>
-
-              {/* Quick Links */}
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="bg-white rounded-2xl shadow-sm border border-stone-200 p-4"
-              >
-                <h3 className="font-bold text-stone-800 mb-3">Quick Links</h3>
-                <div className="space-y-2">
-                  <a 
-                    href="/TCN_BulletinBoard" 
-                    className="flex items-center justify-between p-2 rounded-lg hover:bg-amber-50 transition-colors text-sm"
-                  >
-                    <span className="text-stone-700">Community Bulletin</span>
-                    <ExternalLink className="w-4 h-4 text-amber-700" />
-                  </a>
-                  <a 
-                    href="/TCN_BandOffice" 
-                    className="flex items-center justify-between p-2 rounded-lg hover:bg-amber-50 transition-colors text-sm"
-                  >
-                    <span className="text-stone-700">Band Office Directory</span>
-                    <ExternalLink className="w-4 h-4 text-amber-700" />
-                  </a>
-                  <a 
-                    href="/TCN_Forms" 
-                    className="flex items-center justify-between p-2 rounded-lg hover:bg-amber-50 transition-colors text-sm"
-                  >
-                    <span className="text-stone-700">Community Forms</span>
-                    <ExternalLink className="w-4 h-4 text-amber-700" />
                   </a>
                 </div>
               </motion.div>
