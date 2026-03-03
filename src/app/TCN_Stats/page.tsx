@@ -31,6 +31,7 @@ import {
 // Chart colors matching app theme (amber/stone)
 const RESERVE_COLORS = ['#059669', '#3b82f6', '#9ca3af']; // emerald, blue, gray
 const CHART_COLORS = ['#059669', '#f59e0b', '#9ca3af']; // Pie chart colors for activation status
+const AGE_GROUP_COLORS = ['#f59e0b', '#3b82f6', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316']; // varied colors for age groups
 
 export default function TCN_Stats() {
   const { data: session, status } = useSession();
@@ -155,6 +156,54 @@ export default function TCN_Stats() {
       );
     }
 
+    // Pie chart for mobile
+    if (!isDesktop) {
+      const pieData = detailedStats.ageGroups.map((group, index) => ({
+        ...group,
+        name: group.ageRange,
+        value: group.count,
+        color: AGE_GROUP_COLORS[index % AGE_GROUP_COLORS.length],
+      }));
+
+      return (
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={pieData}
+                cx="50%"
+                cy="50%"
+                innerRadius={40}
+                outerRadius={80}
+                paddingAngle={2}
+                dataKey="value"
+              >
+                {pieData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="bg-white border border-stone-200 rounded-lg shadow-lg p-3">
+                        <p className="text-sm font-medium text-stone-800">Age {payload[0]?.payload?.ageRange}</p>
+                        <p className="text-sm text-amber-700">
+                          {payload[0]?.value} members ({payload[0]?.payload?.percentage}%)
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      );
+    }
+
+    // Bar chart for desktop
     return (
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
@@ -222,7 +271,7 @@ export default function TCN_Stats() {
           >
             <button
               onClick={() => router.back()}
-              className="flex items-center gap-2 px-3 py-2 text-stone-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors mb-4"
+              className="hidden md:block flex items-center gap-2 px-3 py-2 text-stone-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors mb-4"
             >
               <ArrowLeft className="w-4 h-4" />
               <span className="text-sm font-medium">Back</span>
@@ -422,15 +471,31 @@ export default function TCN_Stats() {
                 ) : (
                   <>
                     <AgeGroupsChart />
-                    {/* Summary Stats */}
-                    <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 gap-2">
-                      {detailedStats?.ageGroups.slice(0, 4).map((group) => (
-                        <div key={group.ageRange} className="bg-amber-50 rounded-lg p-2 text-center">
-                          <div className="text-lg font-bold text-amber-700">{group.count}</div>
-                          <div className="text-xs text-stone-500">{group.ageRange}</div>
-                        </div>
-                      ))}
-                    </div>
+                    {/* Legend for mobile pie chart / Summary Stats for desktop bar chart */}
+                    {!isDesktop ? (
+                      <div className="mt-4 flex flex-wrap justify-center gap-3">
+                        {detailedStats?.ageGroups.map((group, index) => (
+                          <div key={group.ageRange} className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: AGE_GROUP_COLORS[index % AGE_GROUP_COLORS.length] }}
+                            />
+                            <span className="text-xs text-stone-600">
+                              {group.ageRange}: {group.count}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        {detailedStats?.ageGroups.slice(0, 4).map((group) => (
+                          <div key={group.ageRange} className="bg-amber-50 rounded-lg p-2 text-center">
+                            <div className="text-lg font-bold text-amber-700">{group.count}</div>
+                            <div className="text-xs text-stone-500">{group.ageRange}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </>
                 )}
               </div>

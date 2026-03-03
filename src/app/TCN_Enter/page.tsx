@@ -111,6 +111,27 @@ export default function TCN_Enter() {
                             </TabsContent>
                             <TabsContent value="register">
                                 <Register />
+                                
+                                {/* Mobile: Activation info panel - shown only on mobile when register tab is active */}
+                                <div className="lg:hidden mt-6 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                                  <div className="flex flex-col gap-3 text-sm text-stone-700">
+                                    <p>
+                                      Based on Indigenous registration in Canada, the 10-digit registration number found on a 
+                                      Secure Certificate of Indian Status is a unique identifier used to confirm a person's status under the 
+                                      Indian Act. You can find your 10-digit treaty number on the front of your status card.
+                                    </p>
+                                    <p>
+                                      Please enter your 10 digit Treaty number to activate your account.<br/>
+                                      The cloud database will be updated every 2 weeks, to include TCN members 
+                                      who just turned 18 years of age.
+                                    </p>
+                                    <p>
+                                      If you need assistance with registration, please send an email with your full name and birth date, and 
+                                      we will find out what is happening, and get back to you.
+                                    </p>
+                                  </div>
+                                </div>
+                                
                                 <div className="mt-4 flex items-center justify-center">
                                   <SheetTrigger asChild>
                                     <Button type="button" variant="outline">
