@@ -45,5 +45,6 @@ next-env.d.ts
 /REFERENCE/
 /scripts/
 
-# User uploaded content (avatars, etc.)
+# User uploaded content (avatars, posters, etc.)
 /public/profiles/
+/public/bulletinboard/
