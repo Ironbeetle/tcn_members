@@ -240,7 +240,6 @@ export default function MemberAccount() {
   }, [deleteMutation]);
 
 
-
   if (status === "loading" || loading) {
     return (
       <div className="w-full min-h-screen bg-stone-100 flex items-center justify-center">
@@ -263,7 +262,7 @@ export default function MemberAccount() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-stone-100">
+    <div className="w-full min-h-screen genbkg">
       {/* Fixed Top Navigation */}
       <div className="fixed top-0 z-50 w-full shadow-md">
         <UserSessionBar showLogo={true} logoSrc="/tcnlogolg.png" />

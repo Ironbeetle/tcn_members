@@ -45,6 +45,20 @@ const departments = [
 
 const mainTiles = [
   {
+    title: 'My Profile',
+    description: 'Account information and settings',
+    image: '/tcnuser.jpg',
+    alt: 'TCN Bulletin Board',
+    link: '/Member_Account',
+  },
+  {
+    title: 'Band Office',
+    description: 'TCN admin office',
+    image: '/bandofficeinside.jpg',
+    alt: 'Community Building',
+    link: '/TCN_BandOffice',
+  },
+  {
     title: 'TCN Bulletin Board',
     description: 'Latest news, announcements, and updates.',
     image: '/tcnbulltintile.jpg',
@@ -63,7 +77,7 @@ const mainTiles = [
     description: 'Addressing urgent issues facing our community',
     image: '/tcnservicestile.jpg',
     alt: 'Local Services',
-    link: '/TCN_BandOffice',
+    link: '/TCN_LocalServices',
   },
   {
     title: 'Employment & Training',
@@ -85,6 +99,13 @@ const mainTiles = [
     image: '/tcnyouthtile.jpg',
     alt: 'TCN Youth',
     link: '/TCN_Youth_Comm',
+  },
+  {
+    title: 'TCN Links',
+    description: 'Addressing urgent issues facing our community',
+    image: '/tcnlinks.jpg',
+    alt: 'TCN Links',
+    link: '/TCN_Links',
   },
 ];
 
@@ -182,116 +203,10 @@ export default function TCNHomePage() {
               </div>
             </div>
           </motion.div>
-          {/* ====== quick links panel ===== */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="mb-6"
-          >
-            <div className="relative grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
-             
-             
-               {/* account profile link */}
-               <div className="flex flex-col justify-center itemes-center">
-                <motion.div variants={itemVariants} className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
-                  <div className="h-16 bg-gradient-to-r from-amber-700 to-amber-900"></div>
-                  <Link href="/Member_Account" className="block">
-                    <div className="px-4 pb-4 -mt-8 hover:bg-stone-50 transition-colors rounded-b-2xl cursor-pointer">
-                      <div className="w-16 h-16 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center mb-2">
-                        <Users className="w-8 h-8 text-amber-700" />
-                      </div>
-                      <h3 className="font-bold text-base text-stone-800">Account Profile</h3>
-                      <div className="text-xs text-amber-700 font-medium">View Account →</div>
-                    </div>
-                  </Link>
-                </motion.div>
-               </div>
-              {/* bandoffice link */}
-               <div className="flex flex-col justify-center itemes-center">
-                <motion.div variants={itemVariants} className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
-                  <div className="h-16 bg-gradient-to-r from-amber-700 to-amber-900"></div>
-                  <Link href="/Member_Account" className="block">
-                    <div className="px-4 pb-4 -mt-8 hover:bg-stone-50 transition-colors rounded-b-2xl cursor-pointer">
-                      <div className="w-16 h-16 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center mb-2">
-                        <Users className="w-8 h-8 text-amber-700" />
-                      </div>
-                      <h3 className="font-bold text-base text-stone-800">Account Profile</h3>
-                      <div className="text-xs text-amber-700 font-medium">View Account →</div>
-                    </div>
-                  </Link>
-                </motion.div>
-               </div>
-              {/* tcn online links */}
-               <div className="flex flex-col justify-center itemes-center">
-                <motion.div variants={itemVariants} className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
-                  <div className="h-16 bg-gradient-to-r from-amber-700 to-amber-900"></div>
-                  <Link href="/Member_Account" className="block">
-                    <div className="px-4 pb-4 -mt-8 hover:bg-stone-50 transition-colors rounded-b-2xl cursor-pointer">
-                      <div className="w-16 h-16 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center mb-2">
-                        <Users className="w-8 h-8 text-amber-700" />
-                      </div>
-                      <h3 className="font-bold text-base text-stone-800">Account Profile</h3>
-                      <div className="text-xs text-amber-700 font-medium">View Account →</div>
-                    </div>
-                  </Link>
-                </motion.div>
-               </div>
-
-            
-
-            </div>
-          </motion.div>
-
           {/* ===== BENTO GRID LAYOUT ===== */}
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-5"
-          >
-            {/* ----- LEFT COLUMN (Desktop): Sidebar items ----- */}
-            <div className="hidden lg:flex lg:col-span-3 flex-col gap-4">
-              {/* Profile Card */}
-              <motion.div variants={itemVariants} className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
-                <div className="h-16 bg-gradient-to-r from-amber-700 to-amber-900"></div>
-                <Link href="/Member_Account" className="block">
-                  <div className="px-4 pb-4 -mt-8 hover:bg-stone-50 transition-colors rounded-b-2xl cursor-pointer">
-                    <div className="w-16 h-16 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center mb-2">
-                      <Users className="w-8 h-8 text-amber-700" />
-                    </div>
-                    <h3 className="font-bold text-base text-stone-800">Account Profile</h3>
-                    <div className="text-xs text-amber-700 font-medium">View Account →</div>
-                  </div>
-                </Link>
-              </motion.div>
-
-              {/* Quick Links */}
-              <motion.div variants={itemVariants} className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-amber-700 to-amber-900 px-4 py-3">
-                  <h3 className="font-bold text-stone-200 text-sm">Quick Links</h3>
-                </div>
-                <div className="p-3 space-y-1">
-                  {departments.map((dept) => (
-                    <Link key={dept.title} href={dept.link}>
-                      <div className="p-2 rounded-lg hover:bg-amber-50 transition-colors cursor-pointer group">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center flex-shrink-0">
-                            <dept.icon className="w-3.5 h-3.5 text-amber-700" />
-                          </div>
-                          <span className="text-sm font-medium text-stone-700 group-hover:text-amber-700 transition-colors">{dept.title}</span>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </motion.div>
-
-             
-            </div>
-
+          
             {/* ----- MAIN CONTENT AREA ----- */}
-            <div className="md:col-span-2 lg:col-span-9 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+            <div className="md:col-span-2 lg:col-span-9 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
               {mainTiles.map((tile) => (
                 <motion.div key={tile.title} variants={itemVariants}>
                   <Link href={tile.link}>
@@ -328,7 +243,8 @@ export default function TCNHomePage() {
                 </div>
               </motion.div>
             </div>
-          </motion.div>
+
+
         </div>
       </div>
 
