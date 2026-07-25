@@ -1,0 +1,1050 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["barcode", "fnmemberlist", "governance", "msgmanager", "tcnbulletin"]
+}
+
+
+model fnmember {
+  id                 String              @id @default(cuid())
+  created            DateTime            @default(now())
+  updated            DateTime            @default(now()) @updatedAt
+  birthdate          DateTime            @db.Date
+  first_name         String
+  last_name          String
+  t_number           String              @unique
+  activated          ActivationStatus    @default(NONE)
+  deceased           String?
+  barcode            Barcode[]
+  family             Family[]
+  profile            Profile[]
+  auth               fnauth?
+  form_submissions   form_submission[]
+  signup_submissions signup_submission[]
+
+  @@schema("fnmemberlist")
+}
+
+model Profile {
+  id           String    @id @default(cuid())
+  created      DateTime  @default(now())
+  updated      DateTime  @default(now()) @updatedAt
+  gender       String?
+  o_r_status   String
+  community    String
+  address      String
+  phone_number String
+  province     ProvinceTerritory @default(MB)
+  email        String
+  image_url    String?
+  fnmemberId   String?
+  fnmember     fnmember? @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
+
+  @@schema("fnmemberlist")
+}
+
+
+enum ProvinceTerritory{
+  AB
+  BC
+  MB
+  NB
+  NL
+  NS
+  NT
+  NU
+  ON
+  PE
+  QC
+  SK
+  YT
+  @@schema("fnmemberlist")
+}
+
+model Barcode {
+  id         String    @id @default(cuid())
+  created    DateTime  @default(now())
+  updated    DateTime  @default(now()) @updatedAt
+  barcode    String    @unique
+  activated  Int       @default(1)
+  fnmemberId String?
+  fnmember   fnmember? @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
+
+  @@schema("fnmemberlist")
+}
+
+model Family {
+  id           String    @id @default(cuid())
+  created      DateTime  @default(now())
+  updated      DateTime  @default(now()) @updatedAt
+  spouse_fname String?
+  spouse_lname String?
+  dependents   Int       @default(0)
+  fnmemberId   String?
+  fnmember     fnmember? @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
+
+  @@schema("fnmemberlist")
+}
+
+model fnauth {
+  id               String    @id @default(cuid())
+  created          DateTime  @default(now())
+  updated          DateTime  @default(now()) @updatedAt
+  username         String    @unique
+  email            String    @unique
+  password         String
+  verified         Boolean   @default(false)
+  resetToken       String?   @unique
+  resetTokenExpiry DateTime?
+  pin              String?
+  pinExpiresAt     DateTime?
+  lastLogin        DateTime?
+  loginAttempts    Int       @default(0)
+  lockedUntil      DateTime?
+  fnmemberId       String    @unique
+  fnmember         fnmember  @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
+  webauthnCredentials WebAuthnCredential[]
+
+  @@schema("fnmemberlist")
+}
+
+model WebAuthnCredential {
+  id              String   @id @default(cuid())
+  created         DateTime @default(now())
+  updated         DateTime @default(now()) @updatedAt
+  credentialId    String   @unique          // Base64URL encoded credential ID
+  publicKey       String   @db.Text         // Base64URL encoded public key
+  counter         BigInt   @default(0)      // Sign counter for replay protection
+  transports      String?                   // JSON array of transports (e.g., ["internal"])
+  deviceName      String?                   // User-friendly device name
+  lastUsed        DateTime?
+  fnauthId        String
+  fnauth          fnauth   @relation(fields: [fnauthId], references: [id], onDelete: Cascade)
+
+  @@index([fnauthId])
+  @@schema("fnmemberlist")
+}
+
+// Communincations 
+
+model bulletin {
+  id         String     @id @default(cuid())
+  created    DateTime   @default(now())
+  updated    DateTime   @default(now()) @updatedAt
+  title      String
+  subject    String
+  content    String?
+  poster_url String?
+  category   Categories @default(CHIEF_COUNCIL)
+  sourceId   String?    @unique
+  userId     String?
+
+  @@schema("tcnbulletin")
+}
+
+model fillable_form {
+  id          String            @id @default(cuid())
+  created     DateTime          @default(now())
+  updated     DateTime          @default(now()) @updatedAt
+  title       String
+  description String?
+  category    FormCategory      @default(BAND_OFFICE)
+  pdf_url     String
+  form_fields Json
+  is_active   Boolean           @default(true)
+  submissions form_submission[]
+
+  @@schema("tcnbulletin")
+}
+
+model form_submission {
+  id             String           @id @default(cuid())
+  created        DateTime         @default(now())
+  updated        DateTime         @default(now()) @updatedAt
+  form_data      Json
+  filled_pdf_url String?
+  status         SubmissionStatus @default(PENDING)
+  formId         String
+  fnmemberId     String
+  fnmember       fnmember         @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
+  form           fillable_form    @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@schema("tcnbulletin")
+}
+
+model signup_form {
+  id              String           @id @default(cuid())
+  created         DateTime         @default(now())
+  updated         DateTime         @default(now()) @updatedAt
+  tcn_form_id     String           @unique  // ID from TCN_COMM (the source)
+  title           String
+  description     String?
+  deadline        DateTime?
+  max_entries     Int?
+  is_active       Boolean          @default(true)
+  category        FormCategory     @default(BAND_OFFICE)
+  created_by      String?          // Department name from TCN_COMM
+  fields          Json             // JSON array of field definitions
+  allow_resubmit  Boolean          @default(false) // Allow members to resubmit (for recurring programs)
+  resubmit_message String?         // Custom message for resubmissions
+  submissions     signup_submission[]
+
+  @@index([is_active])
+  @@index([deadline])
+  @@index([category])
+  @@schema("tcnbulletin")
+}
+
+model signup_submission {
+  id              String      @id @default(cuid())
+  created         DateTime    @default(now())
+  updated         DateTime    @default(now()) @updatedAt
+  responses       Json
+  synced_to_tcn   Boolean     @default(false)
+  sync_attempts   Int         @default(0)
+  last_sync_error String?
+  status        SubmissionStatus @default(SUBMITTED)
+
+  // Relations
+  formId        String
+  form          signup_form    @relation(fields: [formId], references: [id], onDelete: Cascade)
+  fnmemberId    String
+  fnmember      fnmember       @relation(fields: [fnmemberId], references: [id], onDelete: Cascade)
+  history       signup_submission_history[]
+
+  @@unique([formId, fnmemberId])  // One submission per member per form
+  @@schema("tcnbulletin")
+}
+
+// Track submission history for forms that allow re-submissions (recurring programs)
+model signup_submission_history {
+  id               String           @id @default(cuid())
+  created          DateTime         @default(now())
+  responses        Json             // Snapshot of responses at time of submission
+  submission_cycle Int              @default(1) // Which cycle/round (e.g., 1st time, 2nd time)
+  synced_to_tcn    Boolean          @default(false)
+  sync_attempts    Int              @default(0)
+  last_sync_error  String?
+  status           SubmissionStatus @default(SUBMITTED)
+  notes            String?          // Optional notes for this submission
+  
+  // Relations
+  submissionId     String
+  submission       signup_submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@index([created])
+  @@schema("tcnbulletin")
+}
+
+// ==================== Chief & Council ====================
+
+model Current_Council {
+  id            String            @id @default(cuid())
+  created       DateTime          @default(now())
+  updated       DateTime          @default(now()) @updatedAt
+  council_start DateTime
+  council_end   DateTime
+  sourceId      String?           @unique
+  history       Council_History[]
+  members       Council_Member[]
+
+  @@schema("governance")
+}
+
+model Council_Member {
+  id              String           @id @default(cuid())
+  created         DateTime         @default(now())
+  updated         DateTime         @default(now()) @updatedAt
+  position        Positions        @default(CHIEF)
+  first_name      String
+  last_name       String
+  portfolios      Portfolios[]
+  email           String
+  phone           String
+  bio             String?
+  image_url       String?
+  councilId       String?
+  sourceId        String?          @unique
+  Current_Council Current_Council? @relation(fields: [councilId], references: [id], onDelete: Cascade)
+
+  @@schema("governance")
+}
+
+model Council_History {
+  id              String           @id @default(cuid())
+  created         DateTime         @default(now())
+  updated         DateTime         @default(now()) @updatedAt
+  councilId       String?
+  Current_Council Current_Council? @relation(fields: [councilId], references: [id], onDelete: Cascade)
+
+  @@schema("governance")
+}
+// communications department and staff
+model comm_User {
+  id                     String                @id @default(cuid())
+  email                  String                @unique
+  password               String
+  first_name             String
+  last_name              String
+  created                DateTime              @default(now())
+  updated                DateTime              @default(now()) @updatedAt
+  department             comm_Department       @default(BAND_OFFICE)
+  role                   comm_UserRole         @default(STAFF)
+  pin                    String?
+  pinExpiresAt           DateTime?
+  lastLogin              DateTime?
+  loginAttempts          Int                   @default(0)
+  lockedUntil            DateTime?
+  passwordResetRequested DateTime?
+  passwordResetCompleted DateTime?
+  bulletin               comm_BulletinApiLog[]
+  emails                 comm_EmailLog[]
+  loginLogs              comm_LoginLog[]
+  msgcnc                 comm_MsgCnC[]
+  sessions               comm_Session[]
+  smslog                 comm_SmsLog[]
+  staffemail             comm_StaffEmailLog[]
+  signUpForms            comm_SignUpForm[]
+  timesheets             comm_TimeSheet[]
+  travelForms            comm_TravelForm[]
+  officeMemos            comm_OfficeMemo[]     @relation("OfficeMemos")
+
+  @@map("User")
+  @@schema("msgmanager")
+}
+
+model comm_LoginLog {
+  id         String          @id @default(cuid())
+  userId     String
+  loginTime  DateTime        @default(now())
+  department comm_Department
+  ipAddress  String?
+  userAgent  String?
+  success    Boolean         @default(true)
+  failReason String?
+  user       comm_User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("LoginLog")
+  @@schema("msgmanager")
+}
+
+model comm_Session {
+  id            String    @id @default(cuid())
+  sessionToken  String    @unique
+  userId        String
+  expires       DateTime
+  created       DateTime  @default(now())
+  updated       DateTime  @default(now()) @updatedAt
+  access_token  String?
+  refresh_token String?
+  user          comm_User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("Session")
+  @@schema("msgmanager")
+}
+
+model comm_SmsLog {
+  id         String    @id @default(cuid())
+  created    DateTime  @default(now())
+  updated    DateTime  @default(now()) @updatedAt
+  message    String
+  recipients String[]
+  status     String
+  messageIds String[]
+  error      String?
+  userId     String
+  user       comm_User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("SmsLog")
+  @@schema("msgmanager")
+}
+
+model comm_EmailLog {
+  id          String    @id @default(cuid())
+  created     DateTime  @default(now())
+  updated     DateTime  @default(now()) @updatedAt
+  subject     String
+  message     String
+  recipients  String[]
+  status      String
+  messageId   String?
+  error       String?
+  attachments Json?
+  userId      String
+  user        comm_User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("EmailLog")
+  @@schema("msgmanager")
+}
+
+model comm_StaffEmailLog {
+  id          String    @id @default(cuid())
+  created     DateTime  @default(now())
+  updated     DateTime  @updatedAt
+  subject     String
+  message     String
+  recipients  String[]
+  status      String
+  messageId   String?
+  error       String?
+  attachments Json?
+  userId      String
+  user        comm_User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("StaffEmailLog")
+  @@schema("msgmanager")
+}
+
+model comm_BulletinApiLog {
+  id         String          @id @default(cuid())
+  title      String
+  subject    String
+  content    String?
+  poster_url String?
+  category   comm_Categories @default(COMMUNITY_ADMIN)
+  userId     String
+  created    DateTime        @default(now())
+  updated    DateTime        @default(now()) @updatedAt
+  User       comm_User       @relation(fields: [userId], references: [id])
+
+  @@map("BulletinApiLog")
+  @@schema("msgmanager")
+}
+
+model comm_MsgCnC {
+  id          String    @id @default(cuid())
+  title       String
+  content     String
+  priority    String
+  type        String    @default("notice")
+  created     DateTime  @default(now())
+  expiryDate  DateTime?
+  isPublished Boolean   @default(false)
+  userId      String
+  date        DateTime
+  time        DateTime
+  location    String
+  User        comm_User @relation(fields: [userId], references: [id])
+
+  @@map("MsgCnC")
+  @@schema("msgmanager")
+}
+
+model comm_SignUpForm {
+  id              String                @id @default(cuid())
+  portalFormId    String?               @unique
+  title           String
+  description     String?               @db.Text
+  category        comm_FormCategory     @default(BAND_OFFICE)
+  deadline        DateTime?
+  maxEntries      Int?
+  isActive        Boolean               @default(true)
+  allowResubmit   Boolean               @default(false)
+  resubmitMessage String?               @db.Text
+  createdBy       String
+  creator         comm_User             @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  syncedAt        DateTime?
+  fields          comm_FormField[]
+  submissions     comm_FormSubmission[]
+
+  @@index([createdBy])
+  @@index([category])
+  @@index([isActive])
+  @@map("SignUpForm")
+  @@schema("msgmanager")
+}
+
+model comm_FormField {
+  id          String          @id @default(cuid())
+  formId      String
+  fieldId     String?
+  label       String
+  fieldType   comm_FieldType
+  options     String?
+  placeholder String?
+  required    Boolean         @default(false)
+  order       Int
+  form        comm_SignUpForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@map("FormField")
+  @@schema("msgmanager")
+}
+
+model comm_FormSubmission {
+  id          String          @id @default(cuid())
+  formId      String
+  memberId    String?
+  name        String
+  email       String?
+  phone       String?
+  responses   Json
+  submittedAt DateTime        @default(now())
+  form        comm_SignUpForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([formId])
+  @@index([memberId])
+  @@map("FormSubmission")
+  @@schema("msgmanager")
+}
+
+// ==================== TIMESHEETS ====================
+
+model comm_TimeSheet {
+  id               String                @id @default(cuid())
+  created          DateTime              @default(now())
+  updated          DateTime              @updatedAt
+  userId           String
+  user             comm_User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Pay period
+  payPeriodStart   DateTime
+  payPeriodEnd     DateTime
+  
+  // Daily hours as JSON
+  // { "2026-01-06": { "startTime": "08:00", "endTime": "16:30", "breakMinutes": 30, "totalHours": 8.0 }, ... }
+  dailyHours       Json                  @default("{}")
+  
+  // Totals
+  regularHours     Float                 @default(0)
+  overtimeHours    Float                 @default(0)
+  sickHours        Float                 @default(0)
+  vacationHours    Float                 @default(0)
+  statHolidayHours Float                 @default(0)
+  totalHours       Float                 @default(0)
+  
+  notes            String?               @db.Text
+  
+  // Status workflow
+  status           comm_TimeSheetStatus  @default(DRAFT)
+  submittedDate    DateTime?
+  approvedDate     DateTime?
+  approvedBy       String?
+  rejectedDate     DateTime?
+  rejectedBy       String?
+  rejectionReason  String?
+
+  @@unique([userId, payPeriodStart])
+  @@index([userId])
+  @@index([status])
+  @@index([payPeriodStart])
+  @@map("TimeSheet")
+  @@schema("msgmanager")
+}
+
+
+
+// ==================== TRAVEL FORMS ====================
+
+model comm_TravelForm {
+  id                    String                    @id @default(cuid())
+  created               DateTime                  @default(now())
+  updated               DateTime                  @updatedAt
+  userId                String
+  user                  comm_User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Basic Info
+  name                  String
+  destination           String
+  departureDate         DateTime
+  returnDate            DateTime
+  reasonsForTravel      String                    @db.Text
+  
+  // Accommodation
+  hotelRate             Float                     @default(200)
+  hotelNights           Int                       @default(0)
+  hotelTotal            Float                     @default(0)
+  privateRate           Float                     @default(50)
+  privateNights         Int                       @default(0)
+  privateTotal          Float                     @default(0)
+  
+  // Meals
+  breakfastRate         Float                     @default(20.50)
+  breakfastDays         Int                       @default(0)
+  breakfastTotal        Float                     @default(0)
+  lunchRate             Float                     @default(20.10)
+  lunchDays             Int                       @default(0)
+  lunchTotal            Float                     @default(0)
+  dinnerRate            Float                     @default(50.65)
+  dinnerDays            Int                       @default(0)
+  dinnerTotal           Float                     @default(0)
+  
+  // Incidentals
+  incidentalRate        Float                     @default(10)
+  incidentalDays        Int                       @default(0)
+  incidentalTotal       Float                     @default(0)
+  
+  // Transportation
+  transportationType    comm_TransportationType   @default(PERSONAL_VEHICLE)
+  personalVehicleRate   Float                     @default(0.50)
+  licensePlateNumber    String?
+  oneWayWinnipegKm      Int                       @default(904)
+  oneWayWinnipegTrips   Int                       @default(0)
+  oneWayWinnipegTotal   Float                     @default(0)
+  oneWayThompsonKm      Int                       @default(150)
+  oneWayThompsonTrips   Int                       @default(0)
+  oneWayThompsonTotal   Float                     @default(0)
+  winnipegFlatRate      Float                     @default(450)
+  thompsonFlatRate      Float                     @default(100)
+  publicTransportTotal  Float                     @default(0)
+  
+  // Taxi
+  taxiFareRate          Float                     @default(17.30)
+  taxiFareDays          Int                       @default(0)
+  taxiFareTotal         Float                     @default(0)
+  
+  // Parking
+  parkingTotal          Float                     @default(0)
+  
+  // Grand Total
+  grandTotal            Float                     @default(0)
+  
+  // Status workflow
+  status                comm_TravelFormStatus     @default(DRAFT)
+  submittedDate         DateTime?
+  approvedDate          DateTime?
+  approvedBy            String?
+  rejectedDate          DateTime?
+  rejectedBy            String?
+  rejectionReason       String?
+  issuedDate            DateTime?
+  completedDate         DateTime?
+
+  @@index([userId])
+  @@index([status])
+  @@index([departureDate])
+  @@map("TravelForm")
+  @@schema("msgmanager")
+}
+
+// ==================== INTER-OFFICE MEMOS ====================
+
+model comm_OfficeMemo {
+  id          String            @id @default(cuid())
+  
+  // Content
+  title       String
+  content     String            @db.Text
+  priority    comm_MemoPriority @default(low)
+  
+  // Targeting
+  department  String?           // Target specific department, null = all departments
+  
+  // Display options
+  isPinned    Boolean           @default(false)
+  isPublished Boolean           @default(true)
+  expiryDate  DateTime?         // Optional auto-expire
+  
+  // Read tracking - JSON array of user IDs
+  readBy      String            @default("[]") @db.Text
+  
+  // Timestamps
+  created     DateTime          @default(now())
+  updated     DateTime          @default(now()) @updatedAt
+  
+  // Author relation
+  authorId    String
+  author      comm_User         @relation("OfficeMemos", fields: [authorId], references: [id], onDelete: Cascade)
+  
+  @@index([department])
+  @@index([priority])
+  @@index([created])
+  @@map("OfficeMemo")
+  @@schema("msgmanager")
+}
+
+// Sample barcode scanner app
+
+model ScanSession {
+  id         String        @id @default(cuid())
+  createdAt  DateTime      @default(now())
+  closedAt   DateTime?
+  status     SessionStatus @default(OPEN)
+  name       String?
+  operatorId String?
+  deviceId   String?
+  location   String?
+  metadata   Json?
+  reads      ScanRead[]
+
+  @@index([status, createdAt])
+  @@map("scan_sessions")
+  @@schema("barcode")
+}
+
+model ScanRead {
+  id              String       @id @default(cuid())
+  sessionId       String
+  readAt          DateTime     @default(now())
+  rawValue        String
+  normalizedValue String
+  symbology       Symbology    @default(CODE128)
+  outcome         ReadOutcome  @default(ACCEPTED)
+  display         ScanDisplay?
+  lookup          ScanLookup?
+  session         ScanSession  @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId, readAt(sort: Desc)])
+  @@index([normalizedValue])
+  @@map("scan_reads")
+  @@schema("barcode")
+}
+
+model ScanLookup {
+  id           String       @id @default(cuid())
+  readId       String       @unique
+  lookedUpAt   DateTime     @default(now())
+  status       LookupStatus
+  memberId     String?
+  barcodeValue String?
+  result       Json?
+  durationMs   Int?
+  read         ScanRead     @relation(fields: [readId], references: [id])
+
+  @@map("scan_lookups")
+  @@schema("barcode")
+}
+
+model ScanDisplay {
+  id          String   @id @default(cuid())
+  readId      String   @unique
+  displayedAt DateTime @default(now())
+  shown       Json?
+  read        ScanRead @relation(fields: [readId], references: [id])
+
+  @@map("scan_displays")
+  @@schema("barcode")
+}
+
+// ENUMS
+
+enum ActivationStatus {
+  NONE
+  PENDING
+  ACTIVATED
+  @@schema("fnmemberlist")
+}
+
+enum Categories {
+  CHIEF_COUNCIL
+  COMMUNITY_ADMIN
+  COMMUNITY_EVENTS
+  COMMUNITY_MEETINGS
+  ECONOMIC_DEVELOPMENT
+  YOUTH
+  LAND_TREATY
+  CULTURAL_SPIRITUAL
+  EDUCATION
+  EMPLOYMENT
+  HEALTH_FAMILY
+  COMMUNITY_INFRASTRUCTURE
+  RECREATION
+  TRSC
+
+  @@schema("tcnbulletin")
+}
+
+enum FormCategory {
+  TREATY_LAND_ENTITLEMENT
+  ADVERSE_AFFECTS
+  TEMA
+  RESOURCE_MGMT_BOARD
+  TRSC
+  CHURCH
+  TRADITIONAL_LIFESTYLE
+  EDUCATION_AUTHORITY
+  CSCMEC
+  TRADITIONAL_KNOWLEDGE
+  ADULT_ED
+  ISETS_TRAINING_EMPLOYMENT
+  ON_GOING_JOBS_MB_HYDRO
+  TCN_HEALTH
+  TCN_PREVENTION
+  JORDANS_PRINCIPLE
+  WAWATAY
+  KEEKINOW
+  HEADSTART
+  HOUSING
+  PUBLIC_UTILITIES
+  FIRE_DEPARTMENT
+  WATER_TREATMENT_PLANT
+  NAT_RESOURCES_HELI_PAD
+  IT_COMMUNICATIONS
+  BAND_HALL
+  TCN_RECREATION
+  TCN_GAMING
+  ARENA
+  PUBLIC_SAFETY_POLICE
+  SOCIAL_WELFARE
+  JUSTICE_PROGRAM
+  FINANCE
+  TCN_TRUST
+  BAND_OFFICE
+  BAND_MEMBERSHIP
+  @@schema("tcnbulletin")
+}
+
+enum SubmissionStatus {
+  PENDING
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+
+  @@schema("tcnbulletin")
+}
+
+enum Positions {
+  CHIEF
+  COUNCILLOR
+
+  @@schema("governance")
+}
+
+enum Portfolios {
+  TREATY
+  HEALTH
+  EDUCATION
+  HOUSING
+  ECONOMIC_DEVELOPMENT
+  ENVIRONMENT
+  PUBLIC_SAFETY
+  LEADERSHIP
+
+  @@schema("governance")
+}
+
+enum comm_UserRole {
+  STAFF
+  STAFF_ADMIN
+  DEPARTMENT_ADMIN
+  FINANCE
+  ADMIN
+  COUNCIL
+
+  @@map("UserRole")
+  @@schema("msgmanager")
+}
+
+enum comm_Department {
+  TREATY_LAND_ENTITLEMENT
+  ADVERSE_AFFECTS
+  TEMA
+  RESOURCE_MGMT_BOARD
+  TRSC
+  CHURCH
+  TRADITIONAL_LIFESTYLE
+  EDUCATION_AUTHORITY
+  CSCMEC
+  TRADITIONAL_KNOWLEDGE
+  ADULT_ED
+  ISETS_TRAINING_EMPLOYMENT
+  ON_GOING_JOBS_MB_HYDRO
+  TCN_HEALTH
+  TCN_PREVENTION
+  JORDANS_PRINCIPLE
+  WAWATAY
+  KEEKINOW
+  HEADSTART
+  HOUSING
+  PUBLIC_UTILITIES
+  FIRE_DEPARTMENT
+  WATER_TREATMENT_PLANT
+  NAT_RESOURCES_HELI_PAD
+  IT_COMMUNICATIONS
+  BAND_HALL
+  TCN_RECREATION
+  TCN_GAMING
+  ARENA
+  PUBLIC_SAFETY_POLICE
+  SOCIAL_WELFARE
+  JUSTICE_PROGRAM
+  FINANCE
+  TCN_TRUST
+  BAND_OFFICE
+  BAND_MEMBERSHIP
+  @@map("Department")
+  @@schema("msgmanager")
+}
+
+enum comm_Categories {
+  CHIEF_COUNCIL
+  COMMUNITY_ADMIN
+  COMMUNITY_EVENTS
+  COMMUNITY_MEETINGS
+  ECONOMIC_DEVELOPMENT
+  YOUTH
+  LAND_TREATY
+  CULTURAL_SPIRITUAL
+  EDUCATION
+  EMPLOYMENT
+  HEALTH_FAMILY
+  COMMUNITY_INFRASTRUCTURE
+  RECREATION
+  TRSC
+  @@map("Categories")
+  @@schema("msgmanager")
+}
+
+enum comm_FieldType {
+  TEXT
+  TEXTAREA
+  SELECT
+  MULTISELECT
+  CHECKBOX
+  DATE
+  NUMBER
+  EMAIL
+  PHONE
+
+  @@map("FieldType")
+  @@schema("msgmanager")
+}
+
+enum comm_TimeSheetStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+
+  @@map("TimeSheetStatus")
+  @@schema("msgmanager")
+}
+
+enum comm_TransportationType {
+  PERSONAL_VEHICLE
+  PUBLIC_TRANSPORT_WINNIPEG
+  PUBLIC_TRANSPORT_THOMPSON
+  COMBINATION
+  OTHER
+
+  @@map("TransportationType")
+  @@schema("msgmanager")
+}
+
+enum comm_TravelFormStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  ISSUED
+  COMPLETED
+  CANCELLED
+
+  @@map("TravelFormStatus")
+  @@schema("msgmanager")
+}
+
+enum comm_BulletinCategory {
+  CHIEF_COUNCIL
+  COMMUNITY_ADMIN
+  COMMUNITY_EVENTS
+  COMMUNITY_MEETINGS
+  ECONOMIC_DEVELOPMENT
+  YOUTH
+  LAND_TREATY
+  CULTURAL_SPIRITUAL
+  EDUCATION
+  EMPLOYMENT
+  HEALTH_FAMILY
+  COMMUNITY_INFRASTRUCTURE
+  RECREATION
+  TRSC
+
+  @@map("BulletinCategory")
+  @@schema("msgmanager")
+}
+
+enum comm_FormCategory {
+  TREATY_LAND_ENTITLEMENT
+  ADVERSE_AFFECTS
+  TEMA
+  RESOURCE_MGMT_BOARD
+  TRSC
+  CHURCH
+  TRADITIONAL_LIFESTYLE
+  EDUCATION_AUTHORITY
+  CSCMEC
+  TRADITIONAL_KNOWLEDGE
+  ADULT_ED
+  ISETS_TRAINING_EMPLOYMENT
+  ON_GOING_JOBS_MB_HYDRO
+  TCN_HEALTH
+  TCN_PREVENTION
+  JORDANS_PRINCIPLE
+  WAWATAY
+  KEEKINOW
+  HEADSTART
+  HOUSING
+  PUBLIC_UTILITIES
+  FIRE_DEPARTMENT
+  WATER_TREATMENT_PLANT
+  NAT_RESOURCES_HELI_PAD
+  IT_COMMUNICATIONS
+  BAND_HALL
+  TCN_RECREATION
+  TCN_GAMING
+  ARENA
+  PUBLIC_SAFETY_POLICE
+  SOCIAL_WELFARE
+  JUSTICE_PROGRAM
+  FINANCE
+  TCN_TRUST
+  BAND_OFFICE
+  BAND_MEMBERSHIP
+  @@map("FormCategory_Comm")
+  @@schema("msgmanager")
+}
+
+enum comm_MemoPriority {
+  low
+  medium
+  high
+
+  @@map("MemoPriority")
+  @@schema("msgmanager")
+}
+
+enum SessionStatus {
+  OPEN
+  CLOSED
+  ABORTED
+
+  @@schema("barcode")
+}
+
+enum Symbology {
+  CODE128
+  QR
+  EAN13
+  UPC
+  OTHER
+
+  @@schema("barcode")
+}
+
+enum ReadOutcome {
+  ACCEPTED
+  DISCARDED
+  DUPLICATE
+
+  @@schema("barcode")
+}
+
+enum LookupStatus {
+  FOUND_ACTIVE
+  FOUND_INACTIVE
+  NOT_FOUND
+  ERROR
+  @@schema("barcode")
+}
+
+
+

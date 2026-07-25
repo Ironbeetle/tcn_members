@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <style>
+    .box { fill:#ffffff; stroke:#2b2f3a; stroke-width:2; rx:8; }
+    .title { font: 700 18px 'Segoe UI', Roboto, Arial; fill:#111827; }
+    .label { font: 14px 'Segoe UI', Roboto, Arial; fill:#0f172a; }
+    .small { font: 12px 'Segoe UI', Roboto, Arial; fill:#374151; }
+    .arrow { stroke:#111827; stroke-width:2; marker-end:url(#arrowhead); }
+  </style>
+
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="8" refX="10" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#111827" />
+    </marker>
+  </defs>
+
+  <!-- Frontend -->
+  <rect class="box" x="40" y="40" width="360" height="120" />
+  <text class="title" x="220" y="72" text-anchor="middle">Frontend / UI</text>
+  <text class="small" x="220" y="96" text-anchor="middle">Next.js (React 19) • TypeScript</text>
+  <text class="small" x="220" y="116" text-anchor="middle">Tailwind • Radix • Framer Motion</text>
+
+  <!-- API Layer -->
+  <rect class="box" x="420" y="40" width="360" height="120" />
+  <text class="title" x="600" y="72" text-anchor="middle">API Layer</text>
+  <text class="small" x="600" y="96" text-anchor="middle">Next API routes • src/app/api/*</text>
+  <text class="small" x="600" y="116" text-anchor="middle">Business logic via src/lib/*</text>
+
+  <!-- Database -->
+  <rect class="box" x="820" y="40" width="340" height="120" />
+  <text class="title" x="990" y="72" text-anchor="middle">Database</text>
+  <text class="small" x="990" y="96" text-anchor="middle">PostgreSQL (multi-schema)</text>
+  <text class="small" x="990" y="116" text-anchor="middle">Prisma ORM (prisma/schema.prisma)</text>
+
+  <!-- Arrows top row -->
+  <line class="arrow" x1="400" y1="100" x2="420" y2="100" />
+  <line class="arrow" x1="780" y1="100" x2="820" y2="100" />
+
+  <!-- Business & Services -->
+  <rect class="box" x="120" y="220" width="960" height="140" />
+  <text class="title" x="600" y="250" text-anchor="middle">Business & Services</text>
+  <text class="label" x="600" y="278" text-anchor="middle">Auth, Validation, PDF & Barcode generation, Sync, Forms, Scan handling</text>
+  <text class="small" x="600" y="302" text-anchor="middle">Implemented in src/lib/* and server-side routes</text>
+
+  <!-- Integrations -->
+  <rect class="box" x="60" y="400" width="400" height="120" />
+  <text class="title" x="260" y="430" text-anchor="middle">Integrations</text>
+  <text class="small" x="260" y="456" text-anchor="middle">Twilio (SMS) • Resend (Email) • bwip-js • pdf-lib • sharp</text>
+
+  <!-- Static & Assets -->
+  <rect class="box" x="740" y="400" width="400" height="120" />
+  <text class="title" x="940" y="430" text-anchor="middle">Static & Generated Assets</text>
+  <text class="small" x="940" y="456" text-anchor="middle">public/ • barcodes/ • generated PDFs & images</text>
+
+  <!-- Arrows to integrations & assets -->
+  <line class="arrow" x1="600" y1="360" x2="260" y2="400" />
+  <line class="arrow" x1="600" y1="360" x2="940" y2="400" />
+
+  <!-- Data flow arrows down to business/services -->
+  <line class="arrow" x1="220" y1="160" x2="220" y2="220" />
+  <line class="arrow" x1="600" y1="160" x2="600" y2="220" />
+  <line class="arrow" x1="990" y1="160" x2="990" y2="220" />
+
+  <!-- Legend / Notes -->
+  <text class="small" x="40" y="560">Flow examples: Browser → API → Prisma → DB | API → Twilio/Resend → logs persisted</text>
+
+  <!-- Footer -->
+  <text class="small" x="40" y="700">Generated: tcn_members architecture diagram</text>
+</svg>
