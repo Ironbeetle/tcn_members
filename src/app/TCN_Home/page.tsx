@@ -67,42 +67,42 @@ const mainTiles = [
   },
   {
     title: 'Community Building',
-    description: 'Addressing urgent issues facing our community',
+    description: 'Addressing local issues',
     image: '/tcncommbuildtile.jpg',
     alt: 'Community Building',
     link: '/TCN_Matters',
   },
   {
     title: 'Local Services',
-    description: 'Addressing urgent issues facing our community',
+    description: 'Information about local services.',
     image: '/tcnservicestile.jpg',
     alt: 'Local Services',
     link: '/TCN_LocalServices',
   },
   {
     title: 'Employment & Training',
-    description: 'Job opportunities, skills training programs, and career development resources for TCN members.',
+    description: 'Job opportunities, skills training programs.',
     image: '/tcnemptraintile.jpg',
     alt: 'Employment & Training',
     link: '/TCN_E_T',
   },
   {
     title: 'Land Stewardship',
-    description: 'Keeyask Dam Adverse Effects Programs',
+    description: 'Land use management and conservation.',
     image: '/tcnlandstewardtile.jpg',
     alt: 'Land Stewardship',
     link: '/TCN_TRSC',
   },
   {
     title: 'TCN Youth',
-    description: 'Empowering our youth through activities, mentorship, education, and community engagement programs.',
+    description: 'Empowering our youth.',
     image: '/tcnyouthtile.jpg',
     alt: 'TCN Youth',
     link: '/TCN_Youth_Comm',
   },
   {
     title: 'TCN Links',
-    description: 'Addressing urgent issues facing our community',
+    description: 'Related FaceBook pages and other links',
     image: '/tcnlinks.jpg',
     alt: 'TCN Links',
     link: '/TCN_Links',
@@ -137,23 +137,15 @@ export default function TCNHomePage() {
       <div className="fixed top-0 z-150 w-full shadow-md">
         <UserSessionBar showLogo={true} logoSrc="/tcnlogolg.png" />
       </div>
-
       {/* Main Content Area */}
       <div className="pt-16 pb-20 lg:pb-6">
         <div className="w-full lg:max-w-[85%] mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
-
           {/* Mobile Link Panels */}
           <div className="lg:hidden mb-4">
             <MobileLinkPanels />
           </div>
-
           {/* ===== TCN ACHIMOWIN GREET PANEL ===== */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="mb-6"
-          >
+          <div className="mb-6">
             <div className="relative h-[40vh] bg-gradient-to-br from-stone-900 via-stone-800 to-amber-900 rounded-2xl overflow-hidden">
               {/* Background image placeholder */}
               <div className="absolute inset-0">
@@ -202,7 +194,7 @@ export default function TCNHomePage() {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
           {/* ===== BENTO GRID LAYOUT ===== */}
           
             {/* ----- MAIN CONTENT AREA ----- */}
@@ -215,8 +207,8 @@ export default function TCNHomePage() {
                         <img src={tile.image} alt={tile.alt} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                         <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4">
-                          <h3 className="text-white text-lg font-bold">{tile.title}</h3>
-                          <p className="text-stone-300 text-xs mt-0.5">{tile.description}</p>
+                          <div className="apptextw">{tile.title}</div>
+                          <div className="apptextmini">{tile.description}</div>
                         </div>
                       </div>
                     </div>
@@ -247,7 +239,6 @@ export default function TCNHomePage() {
 
         </div>
       </div>
-
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav />
     </div>
