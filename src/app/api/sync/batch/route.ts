@@ -6,7 +6,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import {
   validateApiKey,
   checkRateLimit,
@@ -24,8 +24,6 @@ import {
   type SyncItem,
 } from '@/lib/sync-validation';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
 
 // Process a single sync item
 async function processSyncItem(item: SyncItem): Promise<{ success: boolean; error?: string; data?: any }> {

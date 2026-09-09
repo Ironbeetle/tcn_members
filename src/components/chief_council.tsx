@@ -1,0 +1,464 @@
+'use client'
+import { useState, useCallback } from 'react';
+import { MobilePageHeader } from '@/components/MobileNav';
+import { useSession } from 'next-auth/react';
+import { useQuery } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
+import { queryBulletins, getChiefAndCouncil } from '@/lib/actions';
+import {
+  Users,
+  Crown,
+  Download,
+  Eye,
+  X,
+  Megaphone,
+  Mail,
+  Phone,
+  Scale,
+  ChevronDown,
+  ChevronUp,
+  Calendar,
+  User,
+} from 'lucide-react';
+
+// Chief and Council type matching database schema
+interface CouncilMember {
+  id: string;
+  created: Date;
+  position: 'CHIEF' | 'COUNCILLOR';
+  first_name: string;
+  last_name: string;
+  portfolios: string[];  // Array of portfolios (up to 4)
+  email: string;
+  phone: string;
+  bio?: string | null;
+  image_url?: string | null;
+  councilId?: string | null;
+}
+
+interface CurrentCouncil {
+  id: string;
+  council_start: Date;
+  council_end: Date;
+}
+
+interface CouncilData {
+  council: CurrentCouncil | null;
+  members: CouncilMember[];
+}
+
+// Community By-Laws
+interface ByLaw {
+  id: string;
+  title: string;
+  description: string;
+  pdfUrl: string;
+  effectiveDate: string;
+  category: string;
+}
+
+const communityByLaws: ByLaw[] = [
+  {
+    id: 'bylaw-1',
+    title: 'Community Protection By-Law',
+    description: 'Regulations for maintaining peace, order and safety within the community.',
+    pdfUrl: '/tcnpdfs/TCNCommunityProtectionBylaw201801.pdf',
+    effectiveDate: '2018-01-01',
+    category: 'Safety'
+  },
+  {
+    id: 'bylaw-2',
+    title: 'Intoxicant By-Law',
+    description: 'Rules and regulations regarding intoxicants and controlled substances within the community.',
+    pdfUrl: '/tcnpdfs/TCNIntoxicantBylaw201701.pdf',
+    effectiveDate: '2017-01-01',
+    category: 'Safety'
+  },
+];
+
+type Bulletin = {
+  id: string;
+  title: string;
+  subject: string;
+  content: string | null;
+  poster_url: string | null;
+  category: string;
+  created: Date;
+  updated: Date;
+};
+
+// Council Member Card Component
+function CouncilMemberCard({ member, isChief = false }: { member: CouncilMember; isChief?: boolean }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const fullName = `${member.first_name} ${member.last_name}`;
+  const positionLabel = member.position === 'CHIEF' ? 'Chief' : 'Councillor';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`bg-white rounded-2xl shadow-sm border overflow-hidden ${
+        isChief ? 'border-amber-300 ring-2 ring-amber-100' : 'border-stone-200'
+      }`}
+    >
+      <div
+        className={`p-4 cursor-pointer ${isChief ? 'bg-gradient-to-r from-amber-700 to-amber-900' : 'bg-gradient-to-r from-stone-700 to-stone-900'}`}
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-4">
+          {/* Photo or placeholder */}
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden ${
+            isChief ? 'bg-amber-600' : 'bg-stone-600'
+          }`}>
+            {member.image_url ? (
+              <img
+                src={member.image_url}
+                alt={fullName}
+                className="w-full h-full object-cover"
+              />
+            ) : isChief ? (
+              <Crown className="w-8 h-8 text-white" />
+            ) : (
+              <User className="w-8 h-8 text-white" />
+            )}
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-bold text-white">{fullName}</h3>
+            <p className="text-sm text-white/80">{positionLabel}</p>
+          </div>
+          <div className="text-white">
+            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+          </div>
+        </div>
+      </div>
+
+      {/* Expanded Content */}
+      {isExpanded && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="p-4 space-y-3"
+        >
+          {member.bio && (
+            <p className="text-sm text-stone-600">{member.bio}</p>
+          )}
+          <div className="flex flex-col gap-2 text-sm">
+            {member.email && (
+              <a href={`mailto:${member.email}`} className="flex items-center gap-2 text-stone-600 hover:text-amber-700">
+                <Mail className="w-4 h-4" />
+                <span>{member.email}</span>
+              </a>
+            )}
+            {member.phone && (
+              <a href={`tel:${member.phone}`} className="flex items-center gap-2 text-stone-600 hover:text-amber-700">
+                <Phone className="w-4 h-4" />
+                <span>{member.phone}</span>
+              </a>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </motion.div>
+  );
+}
+
+// By-Law Card Component
+function ByLawCard({ bylaw }: { bylaw: ByLaw }) {
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-4 hover:shadow-md hover:border-amber-300 transition-all">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+              {bylaw.category}
+            </span>
+            <span className="text-xs text-stone-500">
+              Effective: {new Date(bylaw.effectiveDate).toLocaleDateString()}
+            </span>
+          </div>
+          <h4 className="font-bold text-stone-800 mb-1">{bylaw.title}</h4>
+          <p className="text-sm text-stone-600 line-clamp-2">{bylaw.description}</p>
+        </div>
+        <div className="flex flex-col gap-2">
+          <a
+            href={bylaw.pdfUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 px-3 py-2 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 transition-colors text-sm font-medium"
+          >
+            <Eye className="w-4 h-4" />
+            View
+          </a>
+          <a
+            href={bylaw.pdfUrl}
+            download
+            className="flex items-center gap-1 px-3 py-2 bg-stone-100 text-stone-700 rounded-lg hover:bg-stone-200 transition-colors text-sm font-medium"
+          >
+            <Download className="w-4 h-4" />
+            Download
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const chief_council = () => {
+  const { status } = useSession();
+  const [activeTab, setActiveTab] = useState<'council' | 'bylaws' | 'news'>('council');
+  const [selectedBulletin, setSelectedBulletin] = useState<Bulletin | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // TanStack Query for fetching Chief & Council from database
+  const {
+    data: councilData,
+    isLoading: loadingCouncil,
+  } = useQuery({
+    queryKey: ['chiefAndCouncil'],
+    queryFn: async () => {
+      const result = await getChiefAndCouncil();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load council data');
+      }
+
+      return result.data as CouncilData;
+    },
+    enabled: status === 'authenticated',
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  // TanStack Query for fetching Chief & Council bulletins
+  const {
+    data: bulletinsData,
+    isLoading: loadingBulletins,
+  } = useQuery({
+    queryKey: ['bulletins', 'CHIEF_COUNCIL'],
+    queryFn: async () => {
+      const result = await queryBulletins({
+        category: 'CHIEF_COUNCIL',
+        page: 1,
+        limit: 20,
+        sortBy: 'created',
+        sortOrder: 'desc'
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load bulletins');
+      }
+
+      return result.data;
+    },
+    enabled: status === 'authenticated',
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  // Extract bulletins from query data
+  const bulletins: Bulletin[] = bulletinsData?.bulletins || [];
+
+  // Extract council info and members from query data
+  const currentCouncil = councilData?.council || null;
+  const councilMembers = councilData?.members || [];
+  const chief = councilMembers.find((m: CouncilMember) => m.position === 'CHIEF') || null;
+  const councillors = councilMembers.filter((m: CouncilMember) => m.position === 'COUNCILLOR') || [];
+
+  // Modal handlers
+  const openBulletinModal = useCallback((bulletin: Bulletin) => {
+    setSelectedBulletin(bulletin);
+    setIsModalOpen(true);
+  }, []);
+
+  const closeBulletinModal = useCallback(() => {
+    setIsModalOpen(false);
+    setSelectedBulletin(null);
+  }, []);
+
+  return (
+    <div className="w-full">
+      {/* Bulletin Image Modal */}
+      {isModalOpen && selectedBulletin && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={closeBulletinModal}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.2 }}
+            className="relative bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-stone-200 bg-gradient-to-r from-blue-700 to-blue-900">
+              <div className="flex items-center gap-3">
+                <div className="px-3 py-1 rounded-full text-xs font-semibold bg-white/20 text-white">
+                  Chief & Council
+                </div>
+                <span className="text-white/80 text-sm">
+                  {new Date(selectedBulletin.created).toLocaleDateString('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </span>
+              </div>
+              <button
+                onClick={closeBulletinModal}
+                className="p-2 rounded-full hover:bg-white/20 transition-colors text-white"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
+              {selectedBulletin.poster_url ? (
+                (() => {
+                  const u = selectedBulletin.poster_url || '';
+                  // Convert stored poster path to API route for dynamic serving
+                  const getPosterUrl = (url: string) => {
+                    if (!url) return '';
+                    let filename = '';
+                    if (url.startsWith('http://') || url.startsWith('https://')) {
+                      try {
+                        const urlObj = new URL(url);
+                        filename = urlObj.pathname.split('/').pop() || '';
+                      } catch {
+                        const match = url.match(/\/([^\/]+)$/);
+                        filename = match ? match[1] : '';
+                      }
+                    } else {
+                      filename = url.split('/').pop() || '';
+                    }
+                    return filename ? `/api/poster/${filename}` : '';
+                  };
+                  const posterSrc = getPosterUrl(u);
+                  return (
+                    <div className="relative w-full bg-stone-100 flex items-center justify-center">
+                      <img
+                        src={posterSrc}
+                        alt={selectedBulletin.title}
+                        className="w-full h-auto object-contain max-h-[70vh]"
+                      />
+                    </div>
+                  );
+                })()
+              ) : selectedBulletin.content ? (
+                <div className="w-full p-6 sm:p-8 bg-gradient-to-br from-blue-50 to-stone-50 min-h-[200px] sm:min-h-[300px] flex items-center justify-center">
+                  <div className="prose prose-lg max-w-none">
+                    <p className="text-lg sm:text-xl leading-relaxed text-stone-700 whitespace-pre-wrap">
+                      {selectedBulletin.content}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+              <div className="p-6">
+                <h2 className="text-2xl font-bold text-stone-800 mb-2">{selectedBulletin.title}</h2>
+                <p className="text-stone-600 whitespace-pre-wrap">{selectedBulletin.subject}</p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Mobile Header */}
+      <div className="lg:hidden mb-4">
+        <MobilePageHeader
+          title="Current Chief & Council"
+          subtitle="tataskweyak Cree Nation"
+          icon={<Users className="w-5 h-5" />}
+          gradient="from-blue-700 to-blue-900"
+        />
+
+        
+      </div>
+
+      {/* MAIN CONTENT */}
+      <main className="space-y-3 sm:space-y-4">
+        {/* Desktop Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="hidden lg:block bg-gradient-to-r from-blue-700 to-blue-900 rounded-2xl shadow-lg p-6 text-white"
+        >
+          <div className="flex items-center gap-4 mb-3">
+            <Users className="w-8 h-8" />
+            <h1 className="text-2xl font-bold">Current TCN Chief & Council</h1>
+          </div>
+          <p className="text-blue-50">Tataskweyak Cree Nation Chief and Council.</p>
+        </motion.div>
+
+        {/* Tab Content */}
+          
+        <div className="space-y-4">
+          {loadingCouncil ? (
+            <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-12 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+              <p className="text-stone-600">Loading council members...</p>
+            </div>
+          ) : councilMembers.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-12 text-center">
+              <Users className="w-12 h-12 text-stone-300 mx-auto mb-4" />
+              <p className="text-stone-600">No council members found.</p>
+              <p className="text-xs text-stone-500 mt-2">Council profiles will be synced from the master database.</p>
+            </div>
+          ) : (
+            <>
+              {/* Council Term Info */}
+              {currentCouncil && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+                  <div className="flex items-center gap-2 text-amber-800">
+                    <Calendar className="w-4 h-4" />
+                    <span className="text-sm font-medium">
+                      Council Term: {new Date(currentCouncil.council_start).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} - {new Date(currentCouncil.council_end).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Chief */}
+              {chief && (
+                <div>
+                  <h3 className="text-sm font-bold text-stone-600 px-2 mb-3 flex items-center gap-2">
+                    <Crown className="w-4 h-4 text-amber-700" />
+                    Chief
+                  </h3>
+                  <CouncilMemberCard member={chief} isChief={true} />
+                </div>
+              )}
+
+              {/* Councillors */}
+              {councillors.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-bold text-stone-600 px-2 mb-3 mt-6 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-stone-500" />
+                    Council Members
+                  </h3>
+                  <div className="space-y-3">
+                    {councillors.map((councillor: CouncilMember, index: number) => (
+                      <motion.div
+                        key={councillor.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                      >
+                        <CouncilMemberCard member={councillor} />
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+         
+      </main>
+    </div>
+  );
+};
+
+export default chief_council;

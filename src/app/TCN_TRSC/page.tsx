@@ -34,6 +34,7 @@ import {
   ArrowRight,
   Megaphone,
   Calendar,
+  Link,
 } from "lucide-react"
 
 type Bulletin = {
@@ -46,6 +47,7 @@ type Bulletin = {
   created: Date
   updated: Date
 }
+import { UserSessionBar } from "@/components/UserSessionBar"
 
 const sections = [
   { id: "vision", title: "Self-Sufficient Cree Nation", shortTitle: "Vision", icon: Lightbulb },
@@ -350,47 +352,10 @@ export default function TCN_TRSC() {
         </div>
       )}
 
-      {/* Navigation - removed backdrop-blur for performance */}
-      <nav className="fixed top-0 z-50 w-full will-change-transform">
-        <div className="bg-amber-900 border-b border-amber-700/50">
-          <div className="max-w-7xl mx-auto px-4 md:px-6">
-            <div className="flex items-center justify-between h-16 md:h-20">
-              <div className="flex items-center gap-4">
-                <div className="w-20">
-                  <Backbtn />
-                </div>
-                <div className="hidden md:block h-8 w-px bg-amber-600/50" />
-                <img
-                  src="/tcnlogolg.png"
-                  alt="TCN Logo"
-                  className="hidden md:block h-10 w-auto"
-                />
-              </div>
-              
-              {/* Desktop Nav Pills */}
-              <div className="hidden lg:flex items-center gap-1">
-                {sections.map((section) => {
-                  const Icon = section.icon
-                  return (
-                    <button
-                      key={section.id}
-                      onClick={() => scrollToSection(section.id)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                        activeSection === section.id
-                          ? "bg-amber-500 text-stone-950"
-                          : "text-amber-100 hover:text-white hover:bg-amber-800/50"
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      {section.shortTitle}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      </nav>
+      {/* Fixed Top Navigation */}
+      <div className="fixed top-0 z-50 w-full shadow-md">
+        <UserSessionBar showLogo={true} logoSrc="/tcnlogolg.png" />
+      </div>
 
       {/* Mobile Section Nav - removed backdrop-blur for performance */}
       <div className="lg:hidden fixed top-16 left-0 right-0 z-40 bg-amber-900 border-b border-amber-700/50 overflow-x-auto will-change-transform">
@@ -415,33 +380,7 @@ export default function TCN_TRSC() {
         </div>
       </div>
 
-      {/* Hero */}
-      <section className="relative min-h-[70vh] md:min-h-[50vh] flex items-center justify-center overflow-hidden pt-32 md:pt-20">
-        <div className="absolute inset-0 bg-[url('/tcnarialview2.jpg')] bg-cover bg-center opacity-25" />
-        <div className="absolute inset-0 bg-gradient-to-b from-stone-900/80 via-stone-800/50 to-stone-900/80" />
-        <div className="absolute inset-0 bg-gradient-to-r from-amber-900/30 to-indigo-900/20" />
-
-        <div className="relative z-10 max-w-5xl mx-auto px-4 md:px-6 text-center">
-          <div>
-            <div className="flex flex-col items-center justify-center text-4xl md:text-6xl lg:text-7xl font-black text-white mb-6 pb-6">
-              Traditional
-              <span className="text-yellow-600">
-                Resource Stewardship Center
-              </span>
-            </div>
-            
-            <p className="text-lg md:text-xl text-stone-300 max-w-2xl mx-auto mb-10">
-              Keeyask Dam Adverse Effects Programs
-            </p>
-
-          </div>
-        </div>
-
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
-          <ChevronDown className="w-8 h-8 text-amber-500/50" />
-        </div>
-      </section>
-
+     
       {/* Main Content */}
       <main className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 pb-20">
         
@@ -449,7 +388,7 @@ export default function TCN_TRSC() {
         <section id="facilities" className="py-16 md:py-24">
           <SectionHeader 
             number="01" 
-            title="Offsetting Keeyask Dam Effects"
+            title="Traditional Resource Stewardship Center (TRSC)"
             subtitle="Preserving our culture and traditions"
           />
 
@@ -463,10 +402,9 @@ export default function TCN_TRSC() {
                    land stewardship initiatives and
                     Adverse Effects Agreement program management.
                   </p>
-                  <p className="text-amber-200/80 text-body">
-                   Adverse effects programs provide a substitute opportunity for TCN and members to maintain the 
-                   historical connection to the land. 
-                  </p>
+                 <a href="https://tcntrsc.ca/" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-amber-300 underline">
+                   Visit TRSC Website
+                 </a>
                 </div>
                 <div className="relative">
                   <div className="bg-gradient-to-br from-amber-800/30 to-stone-900/50 rounded-2xl p-8 border border-amber-500/20">

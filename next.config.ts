@@ -18,6 +18,7 @@ const contentSecurityPolicy = `
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  serverExternalPackages: ['@prisma/client', 'pg'],
   async headers() {
     return [
       {

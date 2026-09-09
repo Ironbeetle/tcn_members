@@ -1,6 +1,7 @@
 "use server";
 
-import { PrismaClient, FormCategory, Categories } from "@prisma/client";
+import { FormCategory, Categories } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
@@ -57,8 +58,6 @@ import {
   type FormSubmissionUpdate,
   type FormSubmissionQuery,
 } from "./validation";
-
-const prisma = new PrismaClient();
 
 // Helper function for error handling
 type ActionResult<T> = {

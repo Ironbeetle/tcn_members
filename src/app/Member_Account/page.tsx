@@ -280,22 +280,6 @@ export default function MemberAccount() {
             />
           </div>
 
-          {/* Desktop Home Link */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-            className="hidden lg:block mb-4"
-          >
-            <button
-              onClick={() => router.push('/TCN_Home')}
-              className="flex items-center gap-2 px-4 py-2 text-stone-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors"
-            >
-              <Home className="w-4 h-4" />
-              <span className="text-sm font-medium">Home</span>
-            </button>
-          </motion.div>
-
           {/* Desktop Page Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}

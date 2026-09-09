@@ -6,15 +6,13 @@
  */
 
 import { NextRequest } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import {
   validateApiKey,
   apiSuccess,
   apiError,
   logApiAccess,
 } from '@/lib/api-auth';
-
-const prisma = new PrismaClient();
 
 // GET - Get sync status and database stats
 export async function GET(request: NextRequest) {

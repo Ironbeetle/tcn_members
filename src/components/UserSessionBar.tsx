@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { Backbtn } from "./Backbtn"
 
 interface UserSessionBarProps {
   showLogo?: boolean
@@ -43,6 +44,7 @@ export function UserSessionBar({
       <div className="flex justify-between items-center px-4 lg:px-8 h-16">
         {showLogo && (
           <div className="flex items-center gap-4">
+            <Backbtn />
             <img src={logoSrc} alt="Logo" className="h-10" />
           </div>
         )}

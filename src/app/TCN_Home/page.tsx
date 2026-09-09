@@ -66,11 +66,18 @@ const mainTiles = [
     link: '/TCN_BulletinBoard',
   },
   {
-    title: 'Community Building',
-    description: 'Addressing local issues',
+    title: 'Community Meetings',
+    description: 'Announcements, and meeting updates.',
     image: '/tcncommbuildtile.jpg',
-    alt: 'Community Building',
+    alt: 'TCN Matters',
     link: '/TCN_Matters',
+  },
+  {
+    title: 'TCN Health',
+    description: 'local health services and resources.',
+    image: '/tcnhealth.jpg',
+    alt: 'TCN Health',
+    link: '/TCN_Health',
   },
   {
     title: 'Local Services',
@@ -92,13 +99,6 @@ const mainTiles = [
     image: '/tcnlandstewardtile.jpg',
     alt: 'Land Stewardship',
     link: '/TCN_TRSC',
-  },
-  {
-    title: 'TCN Youth',
-    description: 'Empowering our youth.',
-    image: '/tcnyouthtile.jpg',
-    alt: 'TCN Youth',
-    link: '/TCN_Youth_Comm',
   },
   {
     title: 'TCN Links',
@@ -178,7 +178,7 @@ export default function TCNHomePage() {
                 <div className="flex flex-col justify-end itemes-center lg:items-end">
                   {/* Community Matters */}
                   <motion.div variants={itemVariants} className="w-full">
-                    <Link href="/TCN_Matters" className="w-full">
+                    <Link href="/TCN_Achimowin" className="w-full">
                       
                       <div className="h-full flex flex-col justify-center items-center sm:h-52 w-full achimowinbtn">
                         <div className="w-full flex justify-evenly items-center">

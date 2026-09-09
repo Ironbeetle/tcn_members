@@ -1,8 +1,9 @@
 "use client"
 
 import { Backbtn } from "@/components/Backbtn"
-import { Facebook, Globe, ExternalLink, Wifi } from "lucide-react"
+import { Users, Globe, ExternalLink, Wifi } from "lucide-react"
 import { motion } from "framer-motion"
+import { UserSessionBar } from "@/components/UserSessionBar"
 
 type LinkItem = {
   name: string
@@ -44,7 +45,7 @@ function LinkCard({ item }: { item: LinkItem }) {
     >
       <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
         {item.type === "facebook" ? (
-          <Facebook className="w-5 h-5 text-blue-600" />
+          <Users className="w-5 h-5 text-blue-600" />
         ) : (
           <Globe className="w-5 h-5 text-amber-700" />
         )}
@@ -63,26 +64,10 @@ function LinkCard({ item }: { item: LinkItem }) {
 export default function TCN_Links() {
   return (
     <div className="min-h-screen genbkg scroll-smooth">
-      {/* Navigation */}
-      <nav className="fixed top-0 z-50 w-full will-change-transform">
-        <div className="bg-amber-900 border-b border-amber-700/50">
-          <div className="max-w-7xl mx-auto px-4 md:px-6">
-            <div className="flex items-center justify-between h-16 md:h-20">
-              <div className="flex items-center gap-4">
-                <div className="w-20">
-                  <Backbtn />
-                </div>
-                <div className="hidden md:block h-8 w-px bg-amber-600/50" />
-                <img
-                  src="/tcnlogolg.png"
-                  alt="TCN Logo"
-                  className="hidden md:block h-10 w-auto"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </nav>
+      {/* Fixed Top Navigation */}
+      <div className="fixed top-0 z-50 w-full shadow-md">
+        <UserSessionBar showLogo={true} logoSrc="/tcnlogolg.png" />
+      </div>
 
       {/* Main Content */}
       <main className="max-w-5xl mx-auto px-3 sm:px-4 lg:px-6 pb-20 pt-24">
@@ -119,7 +104,7 @@ export default function TCN_Links() {
           {/* ----- Facebook Panel ----- */}
           <motion.div variants={itemVariants} className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
             <div className="bg-gradient-to-r from-blue-700 to-blue-900 px-5 py-4 flex items-center gap-3">
-              <Facebook className="w-5 h-5 text-white" />
+              <Users className="w-5 h-5 text-white" />
               <h2 className="font-bold text-white text-base">Facebook Pages</h2>
             </div>
             <div className="p-4 flex flex-col gap-2">

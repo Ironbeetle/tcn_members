@@ -346,7 +346,7 @@ export default function TCN_Stats() {
                             ))}
                           </Pie>
                           <Tooltip 
-                            formatter={(value: number) => [value.toLocaleString(), 'Members']}
+                            formatter={(value) => [Number(value).toLocaleString(), 'Members']}
                             contentStyle={{ 
                               backgroundColor: 'white', 
                               border: '1px solid #e7e5e4',

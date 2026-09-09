@@ -8,7 +8,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import {
   validateApiKey,
   checkRateLimit,
@@ -24,8 +24,6 @@ import {
   deltaSyncRequestSchema,
 } from '@/lib/sync-validation';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
 
 // POST - Create or update member from master
 export async function POST(request: NextRequest) {

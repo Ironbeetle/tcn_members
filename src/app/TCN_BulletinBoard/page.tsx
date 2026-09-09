@@ -353,17 +353,6 @@ export default function page() {
             </Sheet>
           </div>
 
-          {/* Desktop Back Button */}
-          <div className="hidden lg:block mb-4">
-            <button
-              onClick={() => router.back()}
-              className="flex items-center gap-2 text-stone-600 hover:text-amber-700 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Back</span>
-            </button>
-          </div>
-
           {/* Grid Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
             
