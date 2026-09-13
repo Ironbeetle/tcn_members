@@ -80,8 +80,8 @@ const mainTiles = [
     link: '/TCN_Health',
   },
   {
-    title: 'Local Services',
-    description: 'Information about local services.',
+    title: 'Services Directory',
+    description: 'Contact Information for local services.',
     image: '/tcnservicestile.jpg',
     alt: 'Local Services',
     link: '/TCN_LocalServices',

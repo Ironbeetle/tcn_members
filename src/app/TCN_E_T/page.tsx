@@ -79,7 +79,7 @@ export default function TCNBandOfficePage() {
                   }`}
                 >
                   <Building2 className="w-4 h-4" />
-                  Council
+                  Jobs
                 </button>
                 <button
                   type="button"
@@ -123,49 +123,29 @@ export default function TCNBandOfficePage() {
               {/* Left Side Navigation (desktop only) */}
               <div className="hidden lg:block lg:col-span-1">
                 {/* === Tab selectors here  === */}
-                <TabsList className="p-6 sm:p-8 lg:p-2 h-auto w-full flex-col items-stretch justify-start gap-0 bg-transparent">
+                <TabsList className="p-6 sm:p-8 lg:p-2 h-auto w-full flex-col items-stretch justify-start gap-3 bg-transparent">
                   <TabsTrigger value="tab1" asChild>
-                    <div className="w-full mb-4 rounded-2xl shadow-sm border border-stone-200 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group h-full data-[state=active]:ring-2 data-[state=active]:ring-amber-600">
-                      <div className="relative h-full overflow-hidden">
-                        <img src="/bandofficeinside.jpg" alt="User" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                        <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4">
-                          <div className="apptextwsm">Jobs</div>
-                        </div>
-                      </div>
+                    <div className="group w-full rounded-2xl bg-amber-900/95 backdrop-blur-sm border border-amber-600/50 flex items-center gap-3 px-5 py-4 cursor-pointer transition-colors hover:bg-amber-800 data-[state=active]:!bg-amber-900/50 data-[state=active]:ring-2 data-[state=active]:ring-amber-400">
+                      <Building2 className="w-6 h-6 text-amber-50 shrink-0 group-data-[state=active]:text-neutral-800" />
+                      <span className="text-lg font-semibold text-amber-50 group-data-[state=active]:text-neutral-800">Jobs</span>
                     </div>
                   </TabsTrigger>
                   <TabsTrigger value="tab2" asChild>
-                    <div className="w-full mb-4 rounded-2xl shadow-sm border border-stone-200 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group h-full data-[state=active]:ring-2 data-[state=active]:ring-amber-600">
-                      <div className="relative h-full overflow-hidden">
-                        <img src="/tcnuser.jpg" alt="User" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                        <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4">
-                          <div className="apptextwsm">ISET</div>
-                        </div>
-                      </div>
+                    <div className="group w-full rounded-2xl bg-amber-900/95 backdrop-blur-sm border border-amber-600/50 flex items-center gap-3 px-5 py-4 cursor-pointer transition-colors hover:bg-amber-800 data-[state=active]:!bg-amber-900/50 data-[state=active]:ring-2 data-[state=active]:ring-amber-400">
+                      <Bell className="w-6 h-6 text-amber-50 shrink-0 group-data-[state=active]:text-neutral-800" />
+                      <span className="text-lg font-semibold text-amber-50 group-data-[state=active]:text-neutral-800">ISET</span>
                     </div>
                   </TabsTrigger>
                   <TabsTrigger value="tab3" asChild>
-                    <div className="w-full mb-4 rounded-2xl shadow-sm border border-stone-200 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group h-full data-[state=active]:ring-2 data-[state=active]:ring-amber-600">
-                      <div className="relative h-full overflow-hidden">
-                        <img src="/tcnuser.jpg" alt="User" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                        <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4">
-                          <div className="apptextwsm">On Going Jobs</div>
-                        </div>
-                      </div>
+                    <div className="group w-full rounded-2xl bg-amber-900/95 backdrop-blur-sm border border-amber-600/50 flex items-center gap-3 px-5 py-4 cursor-pointer transition-colors hover:bg-amber-800 data-[state=active]:!bg-amber-900/50 data-[state=active]:ring-2 data-[state=active]:ring-amber-400">
+                      <Briefcase className="w-6 h-6 text-amber-50 shrink-0 group-data-[state=active]:text-neutral-800" />
+                      <span className="text-lg font-semibold text-amber-50 group-data-[state=active]:text-neutral-800">On Going Jobs</span>
                     </div>
                   </TabsTrigger>
                   <TabsTrigger value="tab4" asChild>
-                    <div className="w-full mb-4 rounded-2xl shadow-sm border border-stone-200 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group h-full data-[state=active]:ring-2 data-[state=active]:ring-amber-600">
-                      <div className="relative h-full overflow-hidden">
-                        <img src="/tcnuser.jpg" alt="User" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                        <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4">
-                          <div className="apptextwsm">T.E.A</div>
-                        </div>
-                      </div>
+                    <div className="group w-full rounded-2xl bg-amber-900/95 backdrop-blur-sm border border-amber-600/50 flex items-center gap-3 px-5 py-4 cursor-pointer transition-colors hover:bg-amber-800 data-[state=active]:!bg-amber-900/50 data-[state=active]:ring-2 data-[state=active]:ring-amber-400">
+                      <Users className="w-6 h-6 text-amber-50 shrink-0 group-data-[state=active]:text-neutral-800" />
+                      <span className="text-lg font-semibold text-amber-50 group-data-[state=active]:text-neutral-800">T.E.A</span>
                     </div>
                   </TabsTrigger>
                 </TabsList>
