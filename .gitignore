@@ -44,6 +44,8 @@ next-env.d.ts
 /src/generated/prisma
 /REFERENCE/
 /scripts/
+/TEMP/
+/barcodes/
 
 # User uploaded content (avatars, posters, etc.)
 /public/profiles/
